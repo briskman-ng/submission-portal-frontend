@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Navbar() {
   return (
@@ -23,9 +24,12 @@ export default function Navbar() {
           </a>
           <a className="text-sm text-[#0E1B18] hover:text-gray-900">Support</a>
 
-          <button className="w-30 h-10 rounded-lg bg-[#2DCC7C] text-sm font-medium text-white hover:bg-green-600">
+          <Link
+            href="/auth/SignIn"
+            className="w-30 h-10 flex items-center justify-center rounded-lg bg-[#2DCC7C] text-sm font-medium text-white hover:bg-green-600"
+          >
             Sign In
-          </button>
+          </Link>
         </div>
       </div>
     </nav>
