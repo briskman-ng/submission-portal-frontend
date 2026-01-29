@@ -45,7 +45,6 @@ const SubmissionForm: React.FC = () => {
       sessionStorage.setItem('submissionData', JSON.stringify(formData));
       router.push('/verify');
     } catch (err) {
-      // Fix ZodError typing issue
       if (err instanceof ZodError) {
         const fieldErrors: Partial<Record<keyof FormData, string>> = {};
         const flattened = err.flatten().fieldErrors;
@@ -61,21 +60,38 @@ const SubmissionForm: React.FC = () => {
     }
   };
 
-  const handleFileChange = (files: FileList | null) => {
-    if (!files) return;
-    const validFiles: File[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (
-        (file.type === 'application/pdf' ||
-          file.type ===
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document') &&
-        file.size <= 25 * 1024 * 1024
-      ) {
-        validFiles.push(file);
-      }
+  // Single file upload handler
+  const handleFileChange = (file: File | null) => {
+    if (!file) return;
+
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Only PDF, DOCX, JPEG, PNG allowed.');
+      return;
     }
-    setFormData({ ...formData, attachments: validFiles });
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert('File too large. Max size is 25MB.');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      attachments: [file], // single file
+    }));
+  };
+
+  const removeFile = () => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: [],
+    }));
   };
 
   return (
@@ -190,9 +206,7 @@ const SubmissionForm: React.FC = () => {
 
         {/* Attachments */}
         <div>
-          <label className="block text-sm font-semibold text-stone-700 mb-1">
-            Attachments
-          </label>
+          <label className="block text-sm font-semibold text-stone-700 mb-1">Attachment</label>
           <div
             onDragEnter={() => setDragActive(true)}
             onDragLeave={() => setDragActive(false)}
@@ -200,7 +214,7 @@ const SubmissionForm: React.FC = () => {
             onDrop={e => {
               e.preventDefault();
               setDragActive(false);
-              handleFileChange(e.dataTransfer.files);
+              if (e.dataTransfer.files.length > 0) handleFileChange(e.dataTransfer.files[0]);
             }}
             className={`border-2 border-dashed rounded-lg p-3 text-center transition-all cursor-pointer ${
               dragActive ? 'border-emerald-500 bg-emerald-50' : 'border-stone-300 hover:border-stone-400'
@@ -211,15 +225,28 @@ const SubmissionForm: React.FC = () => {
             <p className="text-xs text-stone-600">
               <span className="text-emerald-600 font-medium">Click to upload</span> or drag and drop
             </p>
-            <p className="text-xs text-stone-400">PDF, DOCX up to 25MB</p>
+            <p className="text-xs text-stone-400">PDF, DOCX, JPEG, PNG up to 25MB</p>
           </div>
           <input
             id="fileInput"
             type="file"
-            multiple
             className="hidden"
-            onChange={e => handleFileChange(e.target.files)}
+            onChange={e => e.target.files && handleFileChange(e.target.files[0])}
+            accept=".pdf,.docx,.jpeg,.jpg,.png"
           />
+
+          {formData.attachments && formData.attachments.length > 0 && (
+            <div className="mt-2 flex items-center justify-between bg-stone-100 px-3 py-1 rounded">
+              <span className="text-sm text-stone-700 truncate">{formData.attachments[0].name}</span>
+              <button
+                type="button"
+                onClick={removeFile}
+                className="text-red-500 font-bold ml-2 hover:text-red-700"
+              >
+                X
+              </button>
+            </div>
+          )}
           {errors.attachments && <p className="text-xs text-red-500 mt-1">{errors.attachments}</p>}
         </div>
 
