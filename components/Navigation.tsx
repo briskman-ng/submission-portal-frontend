@@ -36,7 +36,7 @@ const Navigation: React.FC<NavigationProps> = ({ isLoggedIn = false }) => {
           <Link href="/#process" className="hover:text-emerald-700 transition-colors">
             Process
           </Link>
-          <Link href="/#support" className="hover:text-emerald-700 transition-colors">
+          <Link href="/#footer" className="hover:text-emerald-700 transition-colors">
             Support
           </Link>
           {isLoggedIn ? (

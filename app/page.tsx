@@ -4,7 +4,7 @@ import SubmissionForm from '@/components/SubmissionForm';
 
 export default function LandingPage() {
   const trustIndicators = [
-    { icon: Shield, label: 'Bank-Grade Security', sublabel: 'End-to-end encryption' },
+    { icon: Shield, label: 'Secure Submissions', sublabel: 'End-to-end encryption' },
     { icon: Clock, label: '24/7 Availability', sublabel: 'Submit anytime' },
     { icon: CheckCircle, label: 'Instant Confirmation', sublabel: 'Tracking ID provided' },
     { icon: BarChart3, label: 'Real-Time Status', sublabel: 'Monitor progress' }
@@ -55,20 +55,20 @@ export default function LandingPage() {
               </div>
 
               <div className="flex items-center gap-5 pt-4 border-t border-stone-200">
-                <div>
+                {/* <div>
                   <p className="font-display text-2xl font-semibold text-emerald-700">10K+</p>
                   <p className="text-stone-500 text-xs">Submissions Processed</p>
-                </div>
+                </div> */}
                 <div className="w-px h-10 bg-stone-200"></div>
                 <div>
                   <p className="font-display text-2xl font-semibold text-emerald-700">48hr</p>
                   <p className="text-stone-500 text-xs">Avg. Response Time</p>
                 </div>
                 <div className="w-px h-10 bg-stone-200"></div>
-                <div>
+                {/* <div>
                   <p className="font-display text-2xl font-semibold text-emerald-700">9</p>
                   <p className="text-stone-500 text-xs">State Offices</p>
-                </div>
+                </div> */}
               </div>
             </div>
 
