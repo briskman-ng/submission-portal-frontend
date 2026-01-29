@@ -95,7 +95,7 @@ export default function SignUpPage() {
           {/* Submit */}
           <button
             type="submit"
-            className="flex w-full items-center justify-center mt-5 gap-2 rounded-lg bg-[#1F8D56] py-3 text-sm font-semibold text-white hover:bg-green-700"
+            className="flex w-full items-center justify-center mt-4 gap-2 rounded-lg bg-[#1F8D56] py-3 text-sm font-semibold text-white hover:bg-green-700"
           >
             <Image
               src="/SignInKey-icon.svg"
