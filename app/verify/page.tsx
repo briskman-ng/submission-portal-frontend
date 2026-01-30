@@ -5,25 +5,37 @@ import { useRouter } from "next/navigation";
 import { Mail, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { useRequestOtpMutation } from "@/app/api/authApi"; // <-- import the API hook
+import { useVerifyOtpMutation, useRequestOtpMutation } from "@/app/api/authApi";
+import { useCreateSubmissionMutation } from "@/app/api/submissionsApi";
 
 export default function VerifyPage() {
   const router = useRouter();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [resendTimer, setResendTimer] = useState(59);
-  const [email, setEmail] = useState("your@email.com");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [submissionData, setSubmissionData] = useState<any>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  
+  // API mutations
+  const [verifyOtp] = useVerifyOtpMutation();
+  const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation();
+  const [createSubmission] = useCreateSubmissionMutation();
 
-  const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation(); // <-- RTK Query hook
-
+  // Load saved submission data
   useEffect(() => {
-    // Get email from session storage
     const savedData = sessionStorage.getItem("submissionData");
-    if (savedData) {
-      const parsed = JSON.parse(savedData);
-      setEmail(parsed.email || "your@email.com");
+    if (!savedData) {
+      router.push("/"); // No data → redirect to form
+      return;
     }
-  }, []);
+
+    const parsed = JSON.parse(savedData);
+    setSubmissionData(parsed);
+    setEmail(parsed.email || "");
+    setName(parsed.name || "");
+  }, [router]);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -52,22 +64,127 @@ export default function VerifyPage() {
     }
   };
 
-  const handleVerify = () => {
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      router.push("/success");
-    }, 2000);
+  // Single button handles both OTP verification AND form submission
+  const handleVerifyAndSubmit = async () => {
+    if (!submissionData) return;
+
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    try {
+      const enteredOtp = otp.join("");
+      
+      if (!enteredOtp || enteredOtp.length !== 6) {
+        setStatusMessage("❌ Please enter a valid 6-digit OTP");
+        setIsProcessing(false);
+        return;
+      }
+
+      // STEP 1: Verify OTP
+      const verifyResponse = await verifyOtp({ 
+        email: email, 
+        otp: enteredOtp 
+      }).unwrap();
+      
+      setStatusMessage('✅ OTP verified! Now submitting form...');
+
+      // Save token to sessionStorage
+      sessionStorage.setItem("authToken", verifyResponse.accessToken);
+
+      // STEP 2: Prepare form submission
+      const typeMapping: Record<string, string> = {
+        'proposal': 'Proposal',
+        'request': 'Request', 
+        'report': 'Report',
+        'complaint': 'Complaint'
+      };
+      
+      const apiType = typeMapping[submissionData.type] || 'Request';
+
+      // Prepare JSON payload
+      const payload = {
+        type: apiType,
+        title: submissionData.subject,
+        description: submissionData.description,
+        contactInformation: {
+          email: submissionData.email,
+          phone: submissionData.phone,
+          name: submissionData.name
+        }
+      };
+
+      // STEP 3: Submit form data as JSON
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/submissions`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${verifyResponse.accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        if (result.errors && Array.isArray(result.errors)) {
+          const errorMessages = result.errors.map((err: any) => 
+            `${err.field || 'unknown'}: ${err.message}`
+          ).join(', ');
+          throw new Error(`Validation failed: ${errorMessages}`);
+        }
+        throw new Error(result.message || 'Failed to submit form');
+      }
+      
+      setStatusMessage('✅ OTP verified and form submitted successfully!');
+
+      // Clear session storage
+      sessionStorage.removeItem("submissionData");
+      sessionStorage.removeItem("authToken");
+      
+      // Redirect to success page after 1.5 seconds
+      setTimeout(() => {
+        router.push("/success");
+      }, 1500);
+
+    } catch (err: any) {
+      let errorMessage = 'An error occurred. Please try again.';
+      
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.data?.message) {
+        errorMessage = err.data.message;
+      }
+      
+      setStatusMessage(`❌ ${errorMessage}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleResend = async () => {
     setResendTimer(59);
+    setStatusMessage(null);
+    
     try {
-      await requestOtp({ email }).unwrap(); // <-- call API
-      alert(`OTP sent to ${email}`);
+      // Use direct fetch since API requires name field
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/request-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          name: name
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to send OTP');
+      }
+      
+      setStatusMessage(`✅ OTP resent to ${email}`);
     } catch (err: any) {
-      console.error("Failed to resend OTP:", err);
-      alert(err?.data?.message || "Failed to send OTP");
+      setStatusMessage(`❌ Failed to resend OTP`);
     }
   };
 
@@ -82,12 +199,15 @@ export default function VerifyPage() {
                 <Mail className="w-8 h-8 text-white" />
               </div>
               <h2 className="font-display text-xl font-semibold text-white">
-                Verify Your Email
+                Verify & Submit
               </h2>
               <p className="text-emerald-200 text-sm mt-2">
-                We&apos;ve sent a 6-digit code to
+                Enter OTP to verify and submit your form
               </p>
               <p className="text-white font-medium">{email}</p>
+              <p className="text-emerald-100 text-xs mt-1">
+                One click to verify and submit
+              </p>
             </div>
 
             <div className="p-6 space-y-6">
@@ -112,19 +232,31 @@ export default function VerifyPage() {
                 </div>
               </div>
 
+              {/* Status Message Display */}
+              {statusMessage && (
+                <div className={`p-3 rounded-lg text-center text-sm font-medium ${
+                  statusMessage.includes('') 
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  {statusMessage}
+                </div>
+              )}
+
+              {/* Single button for both verify and submit */}
               <button
-                onClick={handleVerify}
-                disabled={otp.some((d) => !d) || isVerifying}
+                onClick={handleVerifyAndSubmit}
+                disabled={otp.some((d) => !d) || isProcessing}
                 className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isVerifying ? (
+                {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Verifying...
+                    Verifying & Submitting...
                   </>
                 ) : (
                   <>
-                    Verify & Continue
+                    Verify OTP & Submit Form
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -140,8 +272,8 @@ export default function VerifyPage() {
                   ) : (
                     <button
                       onClick={handleResend}
-                      disabled={isOtpLoading} // disable while API call
-                      className="text-emerald-600 font-medium hover:underline"
+                      disabled={isOtpLoading}
+                      className="text-emerald-600 font-medium hover:underline disabled:text-stone-400"
                     >
                       {isOtpLoading ? "Sending..." : "Resend Code"}
                     </button>

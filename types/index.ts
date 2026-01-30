@@ -20,6 +20,8 @@ export interface SubmissionRequest {
   description: string;
   contactInformation: ContactInformation;
   file?: File;
+  name: string;
+  email: string;
 }
 
 export interface SubmissionResponse {
@@ -31,6 +33,8 @@ export interface SubmissionResponse {
   contactInformation: ContactInformation;
   submittedAt: string;
   message: string;
+  name: string;
+  email: string;
 }
 
 export interface SubmissionError {

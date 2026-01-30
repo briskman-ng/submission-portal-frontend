@@ -5,9 +5,11 @@ export const submissionApi = createApi({
   reducerPath: "submissionApi",
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as any).auth?.token;
+    prepareHeaders: (headers) => {
+      // Get token from sessionStorage (where you're storing it after OTP verification)
+      const token = sessionStorage.getItem("authToken");
       if (token) {
+        // Make sure to include "Bearer " prefix if your API expects it
         headers.set("authorization", `Bearer ${token}`);
       }
       return headers;
