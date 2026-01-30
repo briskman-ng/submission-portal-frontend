@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
+import ReduxProvider from "@/app/providers/ReduxProviders";
+// import Navigation from '@/components/Navigation';
+// import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'NDDC Connect Hub - Official Digital Gateway',
@@ -17,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-stone-50 font-sans antialiased">
+          <ReduxProvider>
         {/* <Navigation /> */}
         <main>{children}</main>
         {/* <Footer /> */}
+        </ReduxProvider>
       </body>
     </html>
   );

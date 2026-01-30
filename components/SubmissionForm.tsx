@@ -2,11 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Send, MessageSquare, BarChart3, Upload, ArrowRight, Phone } from 'lucide-react';
+import {
+  FileText,
+  Send,
+  MessageSquare,
+  BarChart3,
+  Upload,
+  ArrowRight,
+  Phone,
+} from 'lucide-react';
 import { submissionSchema } from '@/lib/validation';
 import { ZodError, z } from 'zod';
+import { useCreateSubmissionMutation } from '@/app/api/submissionsApi';
 
-type FormData = z.infer<typeof submissionSchema> & { phone: string };
+type FormData = z.infer<typeof submissionSchema> & { phone: string; attachments: File[] };
 
 interface SubmissionType {
   id: string;
@@ -16,6 +25,7 @@ interface SubmissionType {
 
 const SubmissionForm: React.FC = () => {
   const router = useRouter();
+  const [createSubmission, { isLoading }] = useCreateSubmissionMutation();
 
   const [formData, setFormData] = useState<FormData>({
     type: '' as any,
@@ -36,14 +46,42 @@ const SubmissionForm: React.FC = () => {
     { id: 'complaint', label: 'Complaint/Feedback', icon: MessageSquare },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({}); // reset errors
+    setErrors({});
 
     try {
-      submissionSchema.parse(formData); // validate
-      sessionStorage.setItem('submissionData', JSON.stringify(formData));
+      submissionSchema.parse(formData); // Zod validation
+
+      // Build FormData for multipart/form-data API
+      const payload = new FormData();
+      payload.append('type', formData.type);
+      payload.append('title', formData.subject);
+      payload.append('description', formData.description);
+
+      payload.append(
+        'contactInformation',
+        JSON.stringify({
+          email: formData.email,
+          phone: formData.phone,
+        })
+      );
+
+      if (formData.attachments.length > 0) {
+        payload.append('files', formData.attachments[0]); // single file
+      }
+
+      await createSubmission(payload).unwrap();
+
+      // Save submission data to sessionStorage for VerifyPage
+      sessionStorage.setItem(
+        'submissionData',
+        JSON.stringify({ email: formData.email, phone: formData.phone })
+      );
+
+      // Redirect to OTP verify page
       router.push('/verify');
+
     } catch (err) {
       if (err instanceof ZodError) {
         const fieldErrors: Partial<Record<keyof FormData, string>> = {};
@@ -56,11 +94,13 @@ const SubmissionForm: React.FC = () => {
           });
         }
         setErrors(fieldErrors);
+      } else if (err && typeof err === 'object' && 'data' in err) {
+        // Optional: handle API errors here
+        console.error('Submission API error', err);
       }
     }
   };
 
-  // Single file upload handler
   const handleFileChange = (file: File | null) => {
     if (!file) return;
 
@@ -81,18 +121,10 @@ const SubmissionForm: React.FC = () => {
       return;
     }
 
-    setFormData(prev => ({
-      ...prev,
-      attachments: [file], // single file
-    }));
+    setFormData(prev => ({ ...prev, attachments: [file] }));
   };
 
-  const removeFile = () => {
-    setFormData(prev => ({
-      ...prev,
-      attachments: [],
-    }));
-  };
+  const removeFile = () => setFormData(prev => ({ ...prev, attachments: [] }));
 
   return (
     <div className="bg-white rounded-2xl shadow-xl shadow-emerald-900/10 border border-stone-200 overflow-hidden">
@@ -113,10 +145,7 @@ const SubmissionForm: React.FC = () => {
                 key={type.id}
                 type="button"
                 onClick={() =>
-                  setFormData(prev => ({
-                    ...prev,
-                    type: prev.type === type.id ? '' : (type.id as any), // toggle
-                  }))
+                  setFormData(prev => ({ ...prev, type: prev.type === type.id ? '' : (type.id as any) }))
                 }
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-left ${
                   formData.type === type.id
@@ -234,8 +263,7 @@ const SubmissionForm: React.FC = () => {
             onChange={e => e.target.files && handleFileChange(e.target.files[0])}
             accept=".pdf,.docx,.jpeg,.jpg,.png"
           />
-
-          {formData.attachments && formData.attachments.length > 0 && (
+          {formData.attachments.length > 0 && (
             <div className="mt-2 flex items-center justify-between bg-stone-100 px-3 py-1 rounded">
               <span className="text-sm text-stone-700 truncate">{formData.attachments[0].name}</span>
               <button
@@ -253,9 +281,10 @@ const SubmissionForm: React.FC = () => {
         {/* Submit */}
         <button
           type="submit"
+          disabled={isLoading}
           className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 text-sm"
         >
-          Submit to NDDC
+          {isLoading ? 'Submitting...' : 'Submit to NDDC'}
           <ArrowRight className="w-4 h-4" />
         </button>
 

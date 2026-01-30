@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { useRequestOtpMutation } from "@/app/api/authApi"; // <-- import the API hook
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -12,6 +13,8 @@ export default function VerifyPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(59);
   const [email, setEmail] = useState("your@email.com");
+
+  const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation(); // <-- RTK Query hook
 
   useEffect(() => {
     // Get email from session storage
@@ -35,7 +38,6 @@ export default function VerifyPage() {
       newOtp[index] = value;
       setOtp(newOtp);
 
-      // Auto-focus next input
       if (value && index < 5) {
         const nextInput = document.getElementById(`otp-${index + 1}`);
         nextInput?.focus();
@@ -58,9 +60,15 @@ export default function VerifyPage() {
     }, 2000);
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setResendTimer(59);
-    // Trigger resend API
+    try {
+      await requestOtp({ email }).unwrap(); // <-- call API
+      alert(`OTP sent to ${email}`);
+    } catch (err: any) {
+      console.error("Failed to resend OTP:", err);
+      alert(err?.data?.message || "Failed to send OTP");
+    }
   };
 
   return (
@@ -69,7 +77,6 @@ export default function VerifyPage() {
       <section className="pt-20 min-h-screen mesh-gradient pattern-overlay">
         <div className="max-w-md mx-auto px-6 py-16">
           <div className="bg-white rounded-2xl shadow-xl shadow-emerald-900/10 border border-stone-200 overflow-hidden">
-            {/* Header */}
             <div className="bg-gradient-to-r from-emerald-800 to-emerald-700 px-6 py-8 text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-8 h-8 text-white" />
@@ -84,7 +91,6 @@ export default function VerifyPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* OTP Input */}
               <div>
                 <label className="block text-sm font-semibold text-stone-700 mb-3 text-center">
                   Enter Verification Code
@@ -106,7 +112,6 @@ export default function VerifyPage() {
                 </div>
               </div>
 
-              {/* Verify Button */}
               <button
                 onClick={handleVerify}
                 disabled={otp.some((d) => !d) || isVerifying}
@@ -125,7 +130,6 @@ export default function VerifyPage() {
                 )}
               </button>
 
-              {/* Resend */}
               <div className="text-center">
                 <p className="text-sm text-stone-500">
                   Didn&apos;t receive the code?{" "}
@@ -136,15 +140,15 @@ export default function VerifyPage() {
                   ) : (
                     <button
                       onClick={handleResend}
+                      disabled={isOtpLoading} // disable while API call
                       className="text-emerald-600 font-medium hover:underline"
                     >
-                      Resend Code
+                      {isOtpLoading ? "Sending..." : "Resend Code"}
                     </button>
                   )}
                 </p>
               </div>
 
-              {/* Back Button */}
               <button
                 onClick={() => router.push("/")}
                 className="w-full flex items-center justify-center gap-2 text-stone-600 hover:text-emerald-700 transition-colors"
