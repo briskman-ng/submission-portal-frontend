@@ -10,12 +10,18 @@ import {
   Upload,
   ArrowRight,
   Phone,
+  X,
+  User,
 } from 'lucide-react';
 import { submissionSchema } from '@/lib/validation';
 import { ZodError, z } from 'zod';
-import { useCreateSubmissionMutation } from '@/app/api/submissionsApi';
+import { useRequestOtpMutation } from '@/app/api/authApi';
 
-type FormData = z.infer<typeof submissionSchema> & { phone: string; attachments: File[] };
+type FormData = z.infer<typeof submissionSchema> & { 
+  name: string; 
+  phone: string; 
+  attachments: File[] 
+};
 
 interface SubmissionType {
   id: string;
@@ -25,10 +31,10 @@ interface SubmissionType {
 
 const SubmissionForm: React.FC = () => {
   const router = useRouter();
-  const [createSubmission, { isLoading }] = useCreateSubmissionMutation();
-
+  const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation();
   const [formData, setFormData] = useState<FormData>({
     type: '' as any,
+    name: '',
     email: '',
     phone: '',
     subject: '',
@@ -51,36 +57,46 @@ const SubmissionForm: React.FC = () => {
     setErrors({});
 
     try {
-      submissionSchema.parse(formData); // Zod validation
+      // Validate form data
+      submissionSchema.parse(formData);
 
-      // Build FormData for multipart/form-data API
-      const payload = new FormData();
-      payload.append('type', formData.type);
-      payload.append('title', formData.subject);
-      payload.append('description', formData.description);
+      // 1. Save ALL form data to sessionStorage
+      const submissionData = {
+        type: formData.type,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        description: formData.description,
+        attachments: formData.attachments.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified,
+        }))
+      };
+      
+      sessionStorage.setItem('submissionData', JSON.stringify(submissionData));
 
-      payload.append(
-        'contactInformation',
-        JSON.stringify({
-          email: formData.email,
-          phone: formData.phone,
-        })
-      );
+      // Console log all form data
+      console.log('Form data saved to sessionStorage:', submissionData);
 
-      if (formData.attachments.length > 0) {
-        payload.append('files', formData.attachments[0]); // single file
+      // 2. Trigger OTP request API
+      console.log('Requesting OTP for email:', formData.email);
+      try {
+       const response = await requestOtp({ 
+        email: formData.email,
+        name: formData.name  // ADD THIS LINE
+      }).unwrap();
+        console.log('OTP request successful:', response);
+        
+        // Redirect to OTP verify page after successful OTP request
+        router.push('/verify');
+      } catch (otpError: any) {
+        console.error('OTP request failed:', otpError);
+        // Show error but don't prevent saving form data
+        alert(otpError?.data?.message || 'Failed to send OTP. Please try again.');
       }
-
-      await createSubmission(payload).unwrap();
-
-      // Save submission data to sessionStorage for VerifyPage
-      sessionStorage.setItem(
-        'submissionData',
-        JSON.stringify({ email: formData.email, phone: formData.phone })
-      );
-
-      // Redirect to OTP verify page
-      router.push('/verify');
 
     } catch (err) {
       if (err instanceof ZodError) {
@@ -94,9 +110,8 @@ const SubmissionForm: React.FC = () => {
           });
         }
         setErrors(fieldErrors);
-      } else if (err && typeof err === 'object' && 'data' in err) {
-        // Optional: handle API errors here
-        console.error('Submission API error', err);
+      } else {
+        console.error('Submission error', err);
       }
     }
   };
@@ -121,10 +136,46 @@ const SubmissionForm: React.FC = () => {
       return;
     }
 
+    // Replace any existing file with the new one
     setFormData(prev => ({ ...prev, attachments: [file] }));
   };
 
-  const removeFile = () => setFormData(prev => ({ ...prev, attachments: [] }));
+  const removeFile = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the file input click
+    setFormData(prev => ({ ...prev, attachments: [] }));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Handle drag events
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  // Handle drop
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      handleFileChange(file);
+      e.dataTransfer.clearData();
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-xl shadow-emerald-900/10 border border-stone-200 overflow-hidden">
@@ -159,6 +210,26 @@ const SubmissionForm: React.FC = () => {
             ))}
           </div>
           {errors.type && <p className="text-xs text-red-500 mt-1">{errors.type}</p>}
+        </div>
+
+        {/* Name */}
+        <div>
+          <label htmlFor="name" className="block text-sm font-semibold text-stone-700 mb-1">
+            Full Name <span className="text-orange-500">*</span>
+          </label>
+          <div className="relative">
+            <User className="absolute w-4 h-4 left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input
+              id="name"
+              type="text"
+              placeholder="John Doe"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="w-full pl-10 px-3 py-2 rounded-lg border border-stone-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-stone-800 placeholder-stone-400 text-sm"
+            />
+          </div>
+          {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
         </div>
 
         {/* Email */}
@@ -236,56 +307,96 @@ const SubmissionForm: React.FC = () => {
         {/* Attachments */}
         <div>
           <label className="block text-sm font-semibold text-stone-700 mb-1">Attachment</label>
+          
+          {/* File dropzone */}
           <div
-            onDragEnter={() => setDragActive(true)}
-            onDragLeave={() => setDragActive(false)}
-            onDragOver={e => e.preventDefault()}
-            onDrop={e => {
-              e.preventDefault();
-              setDragActive(false);
-              if (e.dataTransfer.files.length > 0) handleFileChange(e.dataTransfer.files[0]);
-            }}
-            className={`border-2 border-dashed rounded-lg p-3 text-center transition-all cursor-pointer ${
-              dragActive ? 'border-emerald-500 bg-emerald-50' : 'border-stone-300 hover:border-stone-400'
-            }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
             onClick={() => document.getElementById('fileInput')?.click()}
+            className={`border-2 border-dashed rounded-lg p-4 text-center transition-all cursor-pointer ${
+              dragActive 
+                ? 'border-emerald-500 bg-emerald-50' 
+                : 'border-stone-300 hover:border-stone-400 hover:bg-stone-50'
+            }`}
           >
-            <Upload className="w-5 h-5 text-stone-400 mx-auto mb-1" />
-            <p className="text-xs text-stone-600">
+            <Upload className={`w-5 h-5 mx-auto mb-2 ${dragActive ? 'text-emerald-500' : 'text-stone-400'}`} />
+            <p className="text-xs text-stone-600 mb-1">
               <span className="text-emerald-600 font-medium">Click to upload</span> or drag and drop
             </p>
             <p className="text-xs text-stone-400">PDF, DOCX, JPEG, PNG up to 25MB</p>
+            
+            {/* Hidden file input */}
+            <input
+              id="fileInput"
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  handleFileChange(e.target.files[0]);
+                }
+              }}
+              accept=".pdf,.docx,.jpeg,.jpg,.png"
+            />
           </div>
-          <input
-            id="fileInput"
-            type="file"
-            className="hidden"
-            onChange={e => e.target.files && handleFileChange(e.target.files[0])}
-            accept=".pdf,.docx,.jpeg,.jpg,.png"
-          />
+
+          {/* File preview */}
           {formData.attachments.length > 0 && (
-            <div className="mt-2 flex items-center justify-between bg-stone-100 px-3 py-1 rounded">
-              <span className="text-sm text-stone-700 truncate">{formData.attachments[0].name}</span>
-              <button
-                type="button"
-                onClick={removeFile}
-                className="text-red-500 font-bold ml-2 hover:text-red-700"
-              >
-                X
-              </button>
+            <div className="mt-3">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="bg-emerald-100 p-2 rounded-lg">
+                      <FileText className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-stone-800 truncate">
+                        {formData.attachments[0].name}
+                      </p>
+                      <p className="text-xs text-stone-500 mt-0.5">
+                        {formatFileSize(formData.attachments[0].size)}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    className="ml-2 p-1.5 rounded-full hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors"
+                    title="Remove file"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-emerald-600 mt-2 text-center">
+                  ✓ File ready for upload
+                </p>
+              </div>
             </div>
           )}
-          {errors.attachments && <p className="text-xs text-red-500 mt-1">{errors.attachments}</p>}
+          
+          {errors.attachments && (
+            <p className="text-xs text-red-500 mt-1">{errors.attachments}</p>
+          )}
         </div>
 
         {/* Submit */}
         <button
           type="submit"
-          disabled={isLoading}
-          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 text-sm"
+          disabled={isOtpLoading}
+          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Submitting...' : 'Submit to NDDC'}
-          <ArrowRight className="w-4 h-4" />
+          {isOtpLoading ? (
+            <>
+              <span className="animate-spin">⟳</span>
+              Sending OTP...
+            </>
+          ) : (
+            <>
+              Submit to NDDC
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
         </button>
 
         <p className="text-xs text-center text-stone-500">
