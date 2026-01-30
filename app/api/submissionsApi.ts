@@ -6,10 +6,9 @@ export const submissionApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_URL,
     prepareHeaders: (headers) => {
-      // Get token from sessionStorage (where you're storing it after OTP verification)
+      // Get token from sessionStorage
       const token = sessionStorage.getItem("authToken");
       if (token) {
-        // Make sure to include "Bearer " prefix if your API expects it
         headers.set("authorization", `Bearer ${token}`);
       }
       return headers;
@@ -23,7 +22,19 @@ export const submissionApi = createApi({
         body: formData,
       }),
     }),
+      // Get submission by tracking number
+    getSubmissionByTrackingNumber: builder.query<any, string>({
+      query: (trackingNumber) => ({
+        url: `/api/v1/submissions/tracking/${trackingNumber}`,
+        method: "GET",
+      }),
+    }),
+   
   }),
 });
 
-export const { useCreateSubmissionMutation } = submissionApi;
+export const { 
+  useCreateSubmissionMutation, 
+    useGetSubmissionByTrackingNumberQuery,
+} = submissionApi;
+

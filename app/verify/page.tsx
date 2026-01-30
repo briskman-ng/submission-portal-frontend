@@ -27,7 +27,7 @@ export default function VerifyPage() {
   useEffect(() => {
     const savedData = sessionStorage.getItem("submissionData");
     if (!savedData) {
-      router.push("/"); // No data → redirect to form
+      router.push("/"); 
       return;
     }
 
@@ -75,7 +75,7 @@ export default function VerifyPage() {
       const enteredOtp = otp.join("");
       
       if (!enteredOtp || enteredOtp.length !== 6) {
-        setStatusMessage("❌ Please enter a valid 6-digit OTP");
+        setStatusMessage(" Please enter a valid 6-digit OTP");
         setIsProcessing(false);
         return;
       }
@@ -86,7 +86,7 @@ export default function VerifyPage() {
         otp: enteredOtp 
       }).unwrap();
       
-      setStatusMessage('✅ OTP verified! Now submitting form...');
+      setStatusMessage('OTP verified! Now submitting form...');
 
       // Save token to sessionStorage
       sessionStorage.setItem("authToken", verifyResponse.accessToken);
@@ -125,6 +125,8 @@ export default function VerifyPage() {
 
       const result = await response.json();
       
+   
+      
       if (!response.ok) {
         if (result.errors && Array.isArray(result.errors)) {
           const errorMessages = result.errors.map((err: any) => 
@@ -135,13 +137,48 @@ export default function VerifyPage() {
         throw new Error(result.message || 'Failed to submit form');
       }
       
-      setStatusMessage('✅ OTP verified and form submitted successfully!');
+      setStatusMessage('OTP verified and form submitted successfully!');
 
-      // Clear session storage
-      sessionStorage.removeItem("submissionData");
-      sessionStorage.removeItem("authToken");
+
+      let trackingId = null;
       
-      // Redirect to success page after 1.5 seconds
+      // Check for trackingNumber (from email example: NDDC-20260130-5249)
+      if (result.data?.trackingNumber) {
+        trackingId = result.data.trackingNumber;
+      } else if (result.trackingNumber) {
+        trackingId = result.trackingNumber;
+      } 
+      // Check for trackingId (alternative field name)
+      else if (result.data?.trackingId) {
+        trackingId = result.data.trackingId;
+      } else if (result.trackingId) {
+        trackingId = result.trackingId;
+      }
+      // Check for referenceNumber (another possible field)
+      else if (result.data?.referenceNumber) {
+        trackingId = result.data.referenceNumber;
+      } else if (result.referenceNumber) {
+        trackingId = result.referenceNumber;
+      }
+      // Fallback to database ID
+      else if (result.data?.id) {
+        trackingId = result.data.id;
+      } else if (result.id) {
+        trackingId = result.id;
+      }
+      
+      // Save the tracking ID to sessionStorage
+      if (trackingId) {
+        sessionStorage.setItem("lastSubmissionTrackingId", trackingId);
+        console.log('Saved tracking ID for success page:', trackingId);
+      } else {
+        console.warn('No tracking ID found in API response:', result);
+      }
+
+      // Clear session storage (but keep authToken and tracking ID)
+      sessionStorage.removeItem("submissionData");
+      
+      // Redirect to success page after 1. seconds
       setTimeout(() => {
         router.push("/success");
       }, 1500);
@@ -155,7 +192,7 @@ export default function VerifyPage() {
         errorMessage = err.data.message;
       }
       
-      setStatusMessage(`❌ ${errorMessage}`);
+      setStatusMessage(` ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
@@ -182,9 +219,9 @@ export default function VerifyPage() {
         throw new Error(result.message || 'Failed to send OTP');
       }
       
-      setStatusMessage(`✅ OTP resent to ${email}`);
+      setStatusMessage(` OTP resent to ${email}`);
     } catch (err: any) {
-      setStatusMessage(`❌ Failed to resend OTP`);
+      setStatusMessage(`Failed to resend OTP`);
     }
   };
 
