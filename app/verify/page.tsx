@@ -305,7 +305,7 @@ export default function VerifyPage() {
               </div>
 
               {/* Status Message Display */}
-              {statusMessage && (
+              {/* {statusMessage && (
                 <div className={`p-3 rounded-lg text-center text-sm font-medium ${
                   statusMessage.includes('OTP verified') 
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
@@ -313,10 +313,10 @@ export default function VerifyPage() {
                 }`}>
                   {statusMessage}
                 </div>
-              )}
+              )} */}
 
               {/* File preview if files exist */}
-              {files.length > 0 && (
+              {/* {files.length > 0 && (
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Files to be submitted:
@@ -329,7 +329,7 @@ export default function VerifyPage() {
                     ))}
                   </ul>
                 </div>
-              )}
+              )} */}
 
               {/* Single button for both verify and submit */}
               <button
