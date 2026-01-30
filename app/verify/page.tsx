@@ -5,25 +5,44 @@ import { useRouter } from "next/navigation";
 import { Mail, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { useRequestOtpMutation } from "@/app/api/authApi"; // <-- import the API hook
+import { useRequestOtpMutation } from "@/app/api/authApi";
+import { useVerifyOtpMutation } from "@/app/api/authApi"; // verify endpoint
+import { useCreateSubmissionMutation } from "@/app/api/submissionsApi";
 
 export default function VerifyPage() {
   const router = useRouter();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(59);
-  const [email, setEmail] = useState("your@email.com");
+  const [email, setEmail] = useState("");
+  const [submissionData, setSubmissionData] = useState<any>(null);
 
-  const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation(); // <-- RTK Query hook
+  const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation();
+  const [verifyOtp, { isLoading: isVerifyLoading }] = useVerifyOtpMutation();
+  const [createSubmission, { isLoading: isSubmitting }] = useCreateSubmissionMutation();
 
+  // Load saved submission data and send OTP automatically
   useEffect(() => {
-    // Get email from session storage
     const savedData = sessionStorage.getItem("submissionData");
-    if (savedData) {
-      const parsed = JSON.parse(savedData);
-      setEmail(parsed.email || "your@email.com");
+    if (!savedData) {
+      router.push("/"); // No data → redirect to form
+      return;
     }
-  }, []);
+
+    const parsed = JSON.parse(savedData);
+    setSubmissionData(parsed);
+    setEmail(parsed.email || "");
+
+    // Auto-request OTP
+    (async () => {
+      try {
+        await requestOtp({ email: parsed.email }).unwrap();
+        console.log(`OTP sent automatically to ${parsed.email}`);
+      } catch (err: any) {
+        console.error("Failed to send OTP automatically:", err);
+      }
+    })();
+  }, [router, requestOtp]);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -52,18 +71,53 @@ export default function VerifyPage() {
     }
   };
 
-  const handleVerify = () => {
+  // Verify OTP + submit original form
+  const handleVerify = async () => {
+    if (!submissionData) return;
+
     setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
+
+    try {
+      const enteredOtp = otp.join("");
+
+      // 1️⃣ Verify OTP API call
+      const verifyResponse: any = await verifyOtp({ email, otp: enteredOtp }).unwrap();
+      const accessToken = verifyResponse.accessToken;
+
+      // 2️⃣ Submit original form data with accessToken
+      const payload = new FormData();
+      payload.append("type", submissionData.type);
+      payload.append("title", submissionData.subject);
+      payload.append("description", submissionData.description);
+      payload.append(
+        "contactInformation",
+        JSON.stringify({
+          email: submissionData.email,
+          phone: submissionData.phone,
+        })
+      );
+
+      if (submissionData.attachments?.length > 0) {
+        payload.append("files", submissionData.attachments[0]);
+      }
+
+      await createSubmission(payload).unwrap();
+
+      sessionStorage.removeItem("submissionData");
       router.push("/success");
-    }, 2000);
+
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.data?.message || "OTP verification or submission failed");
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleResend = async () => {
     setResendTimer(59);
     try {
-      await requestOtp({ email }).unwrap(); // <-- call API
+      await requestOtp({ email }).unwrap();
       alert(`OTP sent to ${email}`);
     } catch (err: any) {
       console.error("Failed to resend OTP:", err);
@@ -114,17 +168,17 @@ export default function VerifyPage() {
 
               <button
                 onClick={handleVerify}
-                disabled={otp.some((d) => !d) || isVerifying}
+                disabled={otp.some((d) => !d) || isVerifying || isSubmitting || isVerifyLoading}
                 className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isVerifying ? (
+                {isVerifying || isSubmitting || isVerifyLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Verifying...
+                    Processing...
                   </>
                 ) : (
                   <>
-                    Verify & Continue
+                    Verify & Submit
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -140,7 +194,7 @@ export default function VerifyPage() {
                   ) : (
                     <button
                       onClick={handleResend}
-                      disabled={isOtpLoading} // disable while API call
+                      disabled={isOtpLoading}
                       className="text-emerald-600 font-medium hover:underline"
                     >
                       {isOtpLoading ? "Sending..." : "Resend Code"}
