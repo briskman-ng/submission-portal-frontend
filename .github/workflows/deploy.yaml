@@ -2,7 +2,7 @@ name: Deploy to Submission Portal Azure App
 
 on:
   push:
-    branches: [ main ]
+    branches: [ n0mzee/dev ]
 
 permissions:
   id-token: write
@@ -28,11 +28,11 @@ jobs:
         run: |
           npm install
           npm run build
-          # Next.js builds into .next/
-          # We include .next, public, and package files
-          # We keep the zip in the root directory (.) so the next step finds it
-          zip -r release.zip .next public package.json package-lock.json node_modules
-
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static          
+          cd .next/standalone
+          zip -r ../../release.zip .
+            
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -44,4 +44,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
+
           package: release.zip
