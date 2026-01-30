@@ -60,7 +60,33 @@ const SubmissionForm: React.FC = () => {
       // Validate form data
       submissionSchema.parse(formData);
 
-      // 1. Save ALL form data to sessionStorage
+      // Convert file to base64 for sessionStorage
+      const attachmentsWithBase64 = await Promise.all(
+        formData.attachments.map(async (file) => {
+          return new Promise<{
+            name: string;
+            size: number;
+            type: string;
+            lastModified: number;
+            base64: string;
+          }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                lastModified: file.lastModified,
+                base64: reader.result as string,
+              });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
+      // 1. Save ALL form data to sessionStorage (including file as base64)
       const submissionData = {
         type: formData.type,
         name: formData.name,
@@ -68,26 +94,27 @@ const SubmissionForm: React.FC = () => {
         phone: formData.phone,
         subject: formData.subject,
         description: formData.description,
-        attachments: formData.attachments.map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          lastModified: file.lastModified,
-        }))
+        attachments: attachmentsWithBase64
       };
       
       sessionStorage.setItem('submissionData', JSON.stringify(submissionData));
 
-      // Console log all form data
-      console.log('Form data saved to sessionStorage:', submissionData);
+      // Console log all form data (without the base64 string for brevity)
+      console.log('Form data saved to sessionStorage:', {
+        ...submissionData,
+        attachments: submissionData.attachments.map(att => ({
+          ...att,
+          base64: 'BASE64_DATA... (truncated)'
+        }))
+      });
 
       // 2. Trigger OTP request API
       console.log('Requesting OTP for email:', formData.email);
       try {
-       const response = await requestOtp({ 
-        email: formData.email,
-        name: formData.name  // ADD THIS LINE
-      }).unwrap();
+        const response = await requestOtp({ 
+          email: formData.email,
+          name: formData.name
+        }).unwrap();
         console.log('OTP request successful:', response);
         
         // Redirect to OTP verify page after successful OTP request
@@ -153,18 +180,26 @@ const SubmissionForm: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Handle drag events
+  // Handle drag events - FIXED VERSION
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
     if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
     } else if (e.type === "dragleave") {
-      setDragActive(false);
+      // Check if we're leaving the dropzone area
+      const relatedTarget = e.relatedTarget as Node;
+      const dropzone = e.currentTarget;
+      
+      // Only set dragActive to false if we're leaving the dropzone entirely
+      if (!dropzone.contains(relatedTarget)) {
+        setDragActive(false);
+      }
     }
   };
 
-  // Handle drop
+  // Handle drop - FIXED VERSION
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -175,6 +210,13 @@ const SubmissionForm: React.FC = () => {
       handleFileChange(file);
       e.dataTransfer.clearData();
     }
+  };
+
+  // Handle drag end
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
   };
 
   return (
@@ -314,6 +356,7 @@ const SubmissionForm: React.FC = () => {
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
             onClick={() => document.getElementById('fileInput')?.click()}
             className={`border-2 border-dashed rounded-lg p-4 text-center transition-all cursor-pointer ${
               dragActive 
@@ -368,8 +411,9 @@ const SubmissionForm: React.FC = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+                
                 <p className="text-xs text-emerald-600 mt-2 text-center">
-                  ✓ File ready for upload
+                  ✓ File will be saved with your submission
                 </p>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { setupListeners } from "@reduxjs/toolkit/query";
 
 import { submissionApi } from "@/app/api/submissionsApi";
 import { authApi } from "@/app/api/authApi";
+import { fileUploadApi } from "@/app/api/fileUploadApi";
 
 const persistConfig = {
   key: "root",
@@ -17,6 +18,7 @@ const persistConfig = {
 const combinedReducer = combineReducers({
   [submissionApi.reducerPath]: submissionApi.reducer,
   [authApi.reducerPath]: authApi.reducer,
+  [fileUploadApi.reducerPath]: fileUploadApi.reducer,
 });
 
 const rootReducer: Reducer = (state, action: UnknownAction) => combinedReducer(state, action);
@@ -30,7 +32,8 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REGISTER, REHYDRATE, PAUSE, PERSIST, PURGE],
       },
-    }).concat(submissionApi.middleware).concat(authApi.middleware),
+    }).concat(submissionApi.middleware).concat(authApi.middleware).concat(fileUploadApi.middleware),
+    
 });
 
 export type RootStoreState = ReturnType<typeof store.getState>;

@@ -16,6 +16,7 @@ export default function VerifyPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [submissionData, setSubmissionData] = useState<any>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   
   // API mutations
@@ -23,7 +24,7 @@ export default function VerifyPage() {
   const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation();
   const [createSubmission] = useCreateSubmissionMutation();
 
-  // Load saved submission data
+  // Load saved submission data AND files
   useEffect(() => {
     const savedData = sessionStorage.getItem("submissionData");
     if (!savedData) {
@@ -35,6 +36,28 @@ export default function VerifyPage() {
     setSubmissionData(parsed);
     setEmail(parsed.email || "");
     setName(parsed.name || "");
+    
+    // Load files from sessionStorage if they exist
+    const savedFiles = sessionStorage.getItem("submissionFiles");
+    if (savedFiles) {
+      try {
+        const fileData = JSON.parse(savedFiles);
+        // Convert base64 strings back to File objects
+        const loadedFiles = fileData.map((fileObj: any) => {
+          const byteCharacters = atob(fileObj.base64.split(',')[1]);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: fileObj.type });
+          return new File([blob], fileObj.name, { type: fileObj.type });
+        });
+        setFiles(loadedFiles);
+      } catch (error) {
+        console.error("Error loading files from sessionStorage:", error);
+      }
+    }
   }, [router]);
 
   useEffect(() => {
@@ -91,7 +114,7 @@ export default function VerifyPage() {
       // Save token to sessionStorage
       sessionStorage.setItem("authToken", verifyResponse.accessToken);
 
-      // STEP 2: Prepare form submission
+      // STEP 2: Prepare form data
       const typeMapping: Record<string, string> = {
         'proposal': 'Proposal',
         'request': 'Request', 
@@ -101,8 +124,11 @@ export default function VerifyPage() {
       
       const apiType = typeMapping[submissionData.type] || 'Request';
 
-      // Prepare JSON payload
-      const payload = {
+      // Create FormData for submission (especially important for files)
+      const formData = new FormData();
+      
+      // Add JSON data as a field
+      const jsonPayload = {
         type: apiType,
         title: submissionData.subject,
         description: submissionData.description,
@@ -112,20 +138,27 @@ export default function VerifyPage() {
           name: submissionData.name
         }
       };
+      
+      formData.append('data', JSON.stringify(jsonPayload));
+      
+      // Add files if they exist
+      if (files.length > 0) {
+        files.forEach((file, index) => {
+          formData.append('files', file);
+        });
+      }
 
-      // STEP 3: Submit form data as JSON
+      // STEP 3: Submit form data with FormData (not JSON)
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/submissions`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${verifyResponse.accessToken}`,
-          "Content-Type": "application/json"
+          // DON'T set Content-Type header for FormData - let browser set it with boundary
         },
-        body: JSON.stringify(payload)
+        body: formData
       });
 
       const result = await response.json();
-      
-   
       
       if (!response.ok) {
         if (result.errors && Array.isArray(result.errors)) {
@@ -138,7 +171,6 @@ export default function VerifyPage() {
       }
       
       setStatusMessage('OTP verified and form submitted successfully!');
-
 
       let trackingId = null;
       
@@ -177,8 +209,9 @@ export default function VerifyPage() {
 
       // Clear session storage (but keep authToken and tracking ID)
       sessionStorage.removeItem("submissionData");
+      sessionStorage.removeItem("submissionFiles");
       
-      // Redirect to success page after 1. seconds
+      // Redirect to success page after 1.5 seconds
       setTimeout(() => {
         router.push("/success");
       }, 1500);
@@ -242,9 +275,11 @@ export default function VerifyPage() {
                 Enter OTP to verify and submit your form
               </p>
               <p className="text-white font-medium">{email}</p>
-              <p className="text-emerald-100 text-xs mt-1">
-                One click to verify and submit
-              </p>
+              {files.length > 0 && (
+                <p className="text-emerald-100 text-xs mt-1">
+                  {files.length} file(s) attached
+                </p>
+              )}
             </div>
 
             <div className="p-6 space-y-6">
@@ -270,15 +305,31 @@ export default function VerifyPage() {
               </div>
 
               {/* Status Message Display */}
-              {statusMessage && (
+              {/* {statusMessage && (
                 <div className={`p-3 rounded-lg text-center text-sm font-medium ${
-                  statusMessage.includes('') 
+                  statusMessage.includes('OTP verified') 
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
                     : 'bg-red-50 text-red-700 border border-red-200'
                 }`}>
                   {statusMessage}
                 </div>
-              )}
+              )} */}
+
+              {/* File preview if files exist */}
+              {/* {files.length > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Files to be submitted:
+                  </p>
+                  <ul className="space-y-1">
+                    {files.map((file, index) => (
+                      <li key={index} className="text-xs text-gray-600 truncate">
+                        📎 {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )} */}
 
               {/* Single button for both verify and submit */}
               <button
