@@ -29,6 +29,33 @@ interface SubmissionType {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+// File transfer utility
+class FileTransfer {
+  private static instance: FileTransfer;
+  private files: File[] = [];
+
+  static getInstance() {
+    if (!FileTransfer.instance) {
+      FileTransfer.instance = new FileTransfer();
+    }
+    return FileTransfer.instance;
+  }
+
+  setFiles(files: File[]) {
+    this.files = files;
+  }
+
+  getFiles() {
+    return this.files;
+  }
+
+  clear() {
+    this.files = [];
+  }
+}
+
+export const fileTransfer = FileTransfer.getInstance();
+
 const SubmissionForm: React.FC = () => {
   const router = useRouter();
   const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation();
@@ -60,33 +87,7 @@ const SubmissionForm: React.FC = () => {
       // Validate form data
       submissionSchema.parse(formData);
 
-      // Convert file to base64 for sessionStorage
-      const attachmentsWithBase64 = await Promise.all(
-        formData.attachments.map(async (file) => {
-          return new Promise<{
-            name: string;
-            size: number;
-            type: string;
-            lastModified: number;
-            base64: string;
-          }>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              resolve({
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                lastModified: file.lastModified,
-                base64: reader.result as string,
-              });
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        })
-      );
-
-      // 1. Save ALL form data to sessionStorage (including file as base64)
+      // Save form metadata to sessionStorage (without file data)
       const submissionData = {
         type: formData.type,
         name: formData.name,
@@ -94,34 +95,67 @@ const SubmissionForm: React.FC = () => {
         phone: formData.phone,
         subject: formData.subject,
         description: formData.description,
-        attachments: attachmentsWithBase64
+        // Store file metadata only (not the actual files)
+        fileMetadata: formData.attachments.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified,
+        }))
       };
       
       sessionStorage.setItem('submissionData', JSON.stringify(submissionData));
+      
+      // Store files in memory for transfer to verify page
+      if (formData.attachments.length > 0) {
+        // Store files in our transfer utility
+        fileTransfer.setFiles([...formData.attachments]);
+        
+        // Also store a backup in sessionStorage for small files (< 500KB)
+        // This helps if user refreshes the verify page
+        if (formData.attachments[0].size < 500 * 1024) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const fileData = {
+                name: formData.attachments[0].name,
+                type: formData.attachments[0].type,
+                lastModified: formData.attachments[0].lastModified,
+                size: formData.attachments[0].size,
+                data: reader.result as string
+              };
+              sessionStorage.setItem('tempFileBackup', JSON.stringify(fileData));
+            } catch (err) {
+              console.warn('Could not backup file to sessionStorage:', err);
+            }
+          };
+          reader.onerror = () => {
+            console.warn('Failed to read file for backup');
+          };
+          reader.readAsDataURL(formData.attachments[0]);
+        }
+      }
 
-      // Console log all form data (without the base64 string for brevity)
-      console.log('Form data saved to sessionStorage:', {
-        ...submissionData,
-        attachments: submissionData.attachments.map(att => ({
-          ...att,
-          base64: 'BASE64_DATA... (truncated)'
-        }))
-      });
+      console.log('Form data saved. Files stored in memory:', formData.attachments.length);
 
-      // 2. Trigger OTP request API
+      // Request OTP
       console.log('Requesting OTP for email:', formData.email);
       try {
         const response = await requestOtp({ 
           email: formData.email,
           name: formData.name
         }).unwrap();
+        
         console.log('OTP request successful:', response);
         
-        // Redirect to OTP verify page after successful OTP request
+        // Redirect to OTP verify page
         router.push('/verify');
       } catch (otpError: any) {
         console.error('OTP request failed:', otpError);
-        // Show error but don't prevent saving form data
+        // Clear stored files on error
+        fileTransfer.clear();
+        sessionStorage.removeItem('tempFileBackup');
+        
         alert(otpError?.data?.message || 'Failed to send OTP. Please try again.');
       }
 
@@ -139,6 +173,7 @@ const SubmissionForm: React.FC = () => {
         setErrors(fieldErrors);
       } else {
         console.error('Submission error', err);
+        alert('An error occurred. Please try again.');
       }
     }
   };
@@ -168,7 +203,7 @@ const SubmissionForm: React.FC = () => {
   };
 
   const removeFile = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the file input click
+    e.stopPropagation();
     setFormData(prev => ({ ...prev, attachments: [] }));
   };
 
@@ -180,7 +215,6 @@ const SubmissionForm: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Handle drag events - FIXED VERSION
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -188,18 +222,15 @@ const SubmissionForm: React.FC = () => {
     if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
     } else if (e.type === "dragleave") {
-      // Check if we're leaving the dropzone area
       const relatedTarget = e.relatedTarget as Node;
       const dropzone = e.currentTarget;
       
-      // Only set dragActive to false if we're leaving the dropzone entirely
       if (!dropzone.contains(relatedTarget)) {
         setDragActive(false);
       }
     }
   };
 
-  // Handle drop - FIXED VERSION
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -212,7 +243,6 @@ const SubmissionForm: React.FC = () => {
     }
   };
 
-  // Handle drag end
   const handleDragEnd = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();

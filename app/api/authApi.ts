@@ -1,13 +1,12 @@
 // services/authApi.ts
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { API_URL } from "@/config/api"; 
 
 export const authApi = createApi({
   reducerPath: "authApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL,
-  }),
+  baseQuery: fetchBaseQuery({ baseUrl: API_URL }), 
   endpoints: (builder) => ({
-     requestOtp: builder.mutation<any, { email: string; name: string }>({
+    requestOtp: builder.mutation<any, { email: string; name: string }>({
       query: (body) => ({
         url: "/api/v1/auth/request-otp",
         method: "POST",
