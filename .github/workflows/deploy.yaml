@@ -25,6 +25,8 @@ jobs:
           cache: 'npm'
 
       - name: Build Next.js App
+        env: 
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
         run: |
           npm install
           npm run build
@@ -46,3 +48,4 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
 
           package: release.zip
+
