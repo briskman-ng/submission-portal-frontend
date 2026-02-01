@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   Send,
@@ -12,15 +12,18 @@ import {
   Phone,
   X,
   User,
-} from 'lucide-react';
-import { submissionSchema } from '@/lib/validation';
-import { ZodError, z } from 'zod';
-import { useRequestOtpMutation } from '@/app/api/authApi';
+} from "lucide-react";
+import { submissionSchema } from "@/lib/validation";
+import { ZodError, z } from "zod";
+import { useRequestOtpMutation } from "@/app/api/authApi";
+import useGetCurrentUser from "@/react-query/queries/useGetCurrentUser";
+import useUserStore from "@/store/user-store";
+import useCreateSubmission from "@/react-query/mutations/useCreateSubmission";
 
-type FormData = z.infer<typeof submissionSchema> & { 
-  name: string; 
-  phone: string; 
-  attachments: File[] 
+type FormData = z.infer<typeof submissionSchema> & {
+  name: string;
+  phone: string;
+  attachments: File[];
 };
 
 interface SubmissionType {
@@ -60,23 +63,30 @@ const SubmissionForm: React.FC = () => {
   const router = useRouter();
   const [requestOtp, { isLoading: isOtpLoading }] = useRequestOtpMutation();
   const [formData, setFormData] = useState<FormData>({
-    type: '' as any,
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    description: '',
+    type: "" as any,
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    description: "",
     attachments: [],
   });
 
+  const { mutate: createSubmission, isPending: isCreatingSubmission } =
+    useCreateSubmission();
+
+  const user = useUserStore((state) => state.user);
+
   const [dragActive, setDragActive] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
+    {},
+  );
 
   const submissionTypes: SubmissionType[] = [
-    { id: 'proposal', label: 'Project Proposal', icon: FileText },
-    { id: 'report', label: 'Progress Report', icon: BarChart3 },
-    { id: 'request', label: 'Formal Request', icon: Send },
-    { id: 'complaint', label: 'Complaint/Feedback', icon: MessageSquare },
+    { id: "Proposal", label: "Project Proposal", icon: FileText },
+    { id: "Report", label: "Progress Report", icon: BarChart3 },
+    { id: "Request", label: "Formal Request", icon: Send },
+    { id: "Complaint", label: "Complaint/Feedback", icon: MessageSquare },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,21 +106,21 @@ const SubmissionForm: React.FC = () => {
         subject: formData.subject,
         description: formData.description,
         // Store file metadata only (not the actual files)
-        fileMetadata: formData.attachments.map(file => ({
+        fileMetadata: formData.attachments.map((file) => ({
           name: file.name,
           size: file.size,
           type: file.type,
           lastModified: file.lastModified,
-        }))
+        })),
       };
-      
-      sessionStorage.setItem('submissionData', JSON.stringify(submissionData));
-      
+
+      sessionStorage.setItem("submissionData", JSON.stringify(submissionData));
+
       // Store files in memory for transfer to verify page
       if (formData.attachments.length > 0) {
         // Store files in our transfer utility
         fileTransfer.setFiles([...formData.attachments]);
-        
+
         // Also store a backup in sessionStorage for small files (< 500KB)
         // This helps if user refreshes the verify page
         if (formData.attachments[0].size < 500 * 1024) {
@@ -122,48 +132,63 @@ const SubmissionForm: React.FC = () => {
                 type: formData.attachments[0].type,
                 lastModified: formData.attachments[0].lastModified,
                 size: formData.attachments[0].size,
-                data: reader.result as string
+                data: reader.result as string,
               };
-              sessionStorage.setItem('tempFileBackup', JSON.stringify(fileData));
+              sessionStorage.setItem(
+                "tempFileBackup",
+                JSON.stringify(fileData),
+              );
             } catch (err) {
-              console.warn('Could not backup file to sessionStorage:', err);
+              console.warn("Could not backup file to sessionStorage:", err);
             }
           };
           reader.onerror = () => {
-            console.warn('Failed to read file for backup');
+            console.warn("Failed to read file for backup");
           };
           reader.readAsDataURL(formData.attachments[0]);
         }
       }
 
-      console.log('Form data saved. Files stored in memory:', formData.attachments.length);
+      console.log(
+        "Form data saved. Files stored in memory:",
+        formData.attachments.length,
+      );
 
-      // Request OTP
-      console.log('Requesting OTP for email:', formData.email);
       try {
-        const response = await requestOtp({ 
-          email: formData.email,
-          name: formData.name
-        }).unwrap();
-        
-        console.log('OTP request successful:', response);
-        
-        // Redirect to OTP verify page
-        router.push('/verify');
+        if (user) {
+          createSubmission({
+            description: submissionData.description,
+            title: submissionData.subject,
+            type: submissionData.type,
+          });
+        } else {
+          // Request OTP
+          console.log("Requesting OTP for email:", formData.email);
+          const response = await requestOtp({
+            email: formData.email,
+            name: formData.name,
+          }).unwrap();
+
+          console.log("OTP request successful:", response);
+
+          // Redirect to OTP verify page
+          router.push("/verify");
+        }
       } catch (otpError: any) {
-        console.error('OTP request failed:', otpError);
+        console.error("OTP request failed:", otpError);
         // Clear stored files on error
         fileTransfer.clear();
-        sessionStorage.removeItem('tempFileBackup');
-        
-        alert(otpError?.data?.message || 'Failed to send OTP. Please try again.');
-      }
+        sessionStorage.removeItem("tempFileBackup");
 
+        alert(
+          otpError?.data?.message || "Failed to send OTP. Please try again.",
+        );
+      }
     } catch (err) {
       if (err instanceof ZodError) {
         const fieldErrors: Partial<Record<keyof FormData, string>> = {};
         const flattened = err.flatten().fieldErrors;
-        if (flattened && typeof flattened === 'object') {
+        if (flattened && typeof flattened === "object") {
           Object.entries(flattened).forEach(([key, msgs]) => {
             if (Array.isArray(msgs) && msgs.length > 0) {
               fieldErrors[key as keyof FormData] = msgs[0];
@@ -172,8 +197,8 @@ const SubmissionForm: React.FC = () => {
         }
         setErrors(fieldErrors);
       } else {
-        console.error('Submission error', err);
-        alert('An error occurred. Please try again.');
+        console.error("Submission error", err);
+        alert("An error occurred. Please try again.");
       }
     }
   };
@@ -182,49 +207,49 @@ const SubmissionForm: React.FC = () => {
     if (!file) return;
 
     const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/png',
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Only PDF, DOCX, JPEG, PNG allowed.');
+      alert("Invalid file type. Only PDF, DOCX, JPEG, PNG allowed.");
       return;
     }
 
     if (file.size > 25 * 1024 * 1024) {
-      alert('File too large. Max size is 25MB.');
+      alert("File too large. Max size is 25MB.");
       return;
     }
 
     // Replace any existing file with the new one
-    setFormData(prev => ({ ...prev, attachments: [file] }));
+    setFormData((prev) => ({ ...prev, attachments: [file] }));
   };
 
   const removeFile = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFormData(prev => ({ ...prev, attachments: [] }));
+    setFormData((prev) => ({ ...prev, attachments: [] }));
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
     } else if (e.type === "dragleave") {
       const relatedTarget = e.relatedTarget as Node;
       const dropzone = e.currentTarget;
-      
+
       if (!dropzone.contains(relatedTarget)) {
         setDragActive(false);
       }
@@ -235,7 +260,7 @@ const SubmissionForm: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       handleFileChange(file);
@@ -252,7 +277,9 @@ const SubmissionForm: React.FC = () => {
   return (
     <div className="bg-white rounded-2xl shadow-xl shadow-emerald-900/10 border border-stone-200 overflow-hidden">
       <div className="bg-gradient-to-r from-emerald-800 to-emerald-700 px-5 py-4">
-        <h2 className="font-display text-lg font-semibold text-white">New Submission</h2>
+        <h2 className="font-display text-lg font-semibold text-white">
+          New Submission
+        </h2>
         <p className="text-emerald-200 text-sm">Fill in the details to start</p>
       </div>
 
@@ -263,17 +290,20 @@ const SubmissionForm: React.FC = () => {
             Submission Type <span className="text-orange-500">*</span>
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {submissionTypes.map(type => (
+            {submissionTypes.map((type) => (
               <button
                 key={type.id}
                 type="button"
                 onClick={() =>
-                  setFormData(prev => ({ ...prev, type: prev.type === type.id ? '' : (type.id as any) }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    type: prev.type === type.id ? "" : (type.id as any),
+                  }))
                 }
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-left ${
                   formData.type === type.id
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                    : 'border-stone-200 hover:border-stone-300 text-stone-600'
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                    : "border-stone-200 hover:border-stone-300 text-stone-600"
                 }`}
               >
                 <type.icon className="w-4 h-4 flex-shrink-0" />
@@ -281,12 +311,17 @@ const SubmissionForm: React.FC = () => {
               </button>
             ))}
           </div>
-          {errors.type && <p className="text-xs text-red-500 mt-1">{errors.type}</p>}
+          {errors.type && (
+            <p className="text-xs text-red-500 mt-1">{errors.type}</p>
+          )}
         </div>
 
         {/* Name */}
         <div>
-          <label htmlFor="name" className="block text-sm font-semibold text-stone-700 mb-1">
+          <label
+            htmlFor="name"
+            className="block text-sm font-semibold text-stone-700 mb-1"
+          >
             Full Name <span className="text-orange-500">*</span>
           </label>
           <div className="relative">
@@ -296,17 +331,24 @@ const SubmissionForm: React.FC = () => {
               type="text"
               placeholder="John Doe"
               value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               required
               className="w-full pl-10 px-3 py-2 rounded-lg border border-stone-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-stone-800 placeholder-stone-400 text-sm"
             />
           </div>
-          {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          {errors.name && (
+            <p className="text-xs text-red-500 mt-1">{errors.name}</p>
+          )}
         </div>
 
         {/* Email */}
         <div>
-          <label htmlFor="email" className="block text-sm font-semibold text-stone-700 mb-1">
+          <label
+            htmlFor="email"
+            className="block text-sm font-semibold text-stone-700 mb-1"
+          >
             Contact Email <span className="text-orange-500">*</span>
           </label>
           <input
@@ -314,16 +356,23 @@ const SubmissionForm: React.FC = () => {
             type="email"
             placeholder="your@email.com"
             value={formData.email}
-            onChange={e => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, email: e.target.value })
+            }
             required
             className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-stone-800 placeholder-stone-400 text-sm"
           />
-          {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+          {errors.email && (
+            <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+          )}
         </div>
 
         {/* Phone */}
         <div>
-          <label htmlFor="phone" className="block text-sm font-semibold text-stone-700 mb-1">
+          <label
+            htmlFor="phone"
+            className="block text-sm font-semibold text-stone-700 mb-1"
+          >
             Phone Number <span className="text-orange-500">*</span>
           </label>
           <div className="relative">
@@ -333,17 +382,24 @@ const SubmissionForm: React.FC = () => {
               type="tel"
               placeholder="+234 800 000 0000"
               value={formData.phone}
-              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
               required
               className="w-full pl-10 px-3 py-2 rounded-lg border border-stone-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-stone-800 placeholder-stone-400 text-sm"
             />
           </div>
-          {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+          {errors.phone && (
+            <p className="text-xs text-red-500 mt-1">{errors.phone}</p>
+          )}
         </div>
 
         {/* Subject */}
         <div>
-          <label htmlFor="subject" className="block text-sm font-semibold text-stone-700 mb-1">
+          <label
+            htmlFor="subject"
+            className="block text-sm font-semibold text-stone-700 mb-1"
+          >
             Subject <span className="text-orange-500">*</span>
           </label>
           <input
@@ -351,16 +407,23 @@ const SubmissionForm: React.FC = () => {
             type="text"
             placeholder="Brief title for your submission"
             value={formData.subject}
-            onChange={e => setFormData({ ...formData, subject: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, subject: e.target.value })
+            }
             required
             className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-stone-800 placeholder-stone-400 text-sm"
           />
-          {errors.subject && <p className="text-xs text-red-500 mt-1">{errors.subject}</p>}
+          {errors.subject && (
+            <p className="text-xs text-red-500 mt-1">{errors.subject}</p>
+          )}
         </div>
 
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-semibold text-stone-700 mb-1">
+          <label
+            htmlFor="description"
+            className="block text-sm font-semibold text-stone-700 mb-1"
+          >
             Description <span className="text-orange-500">*</span>
           </label>
           <textarea
@@ -369,17 +432,23 @@ const SubmissionForm: React.FC = () => {
             maxLength={5000}
             rows={4}
             value={formData.description}
-            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
             required
             className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-stone-800 placeholder-stone-400 resize-none text-sm"
           />
-          {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
+          {errors.description && (
+            <p className="text-xs text-red-500 mt-1">{errors.description}</p>
+          )}
         </div>
 
         {/* Attachments */}
         <div>
-          <label className="block text-sm font-semibold text-stone-700 mb-1">Attachment</label>
-          
+          <label className="block text-sm font-semibold text-stone-700 mb-1">
+            Attachment
+          </label>
+
           {/* File dropzone */}
           <div
             onDragEnter={handleDrag}
@@ -387,19 +456,26 @@ const SubmissionForm: React.FC = () => {
             onDragOver={handleDrag}
             onDrop={handleDrop}
             onDragEnd={handleDragEnd}
-            onClick={() => document.getElementById('fileInput')?.click()}
+            onClick={() => document.getElementById("fileInput")?.click()}
             className={`border-2 border-dashed rounded-lg p-4 text-center transition-all cursor-pointer ${
-              dragActive 
-                ? 'border-emerald-500 bg-emerald-50' 
-                : 'border-stone-300 hover:border-stone-400 hover:bg-stone-50'
+              dragActive
+                ? "border-emerald-500 bg-emerald-50"
+                : "border-stone-300 hover:border-stone-400 hover:bg-stone-50"
             }`}
           >
-            <Upload className={`w-5 h-5 mx-auto mb-2 ${dragActive ? 'text-emerald-500' : 'text-stone-400'}`} />
+            <Upload
+              className={`w-5 h-5 mx-auto mb-2 ${dragActive ? "text-emerald-500" : "text-stone-400"}`}
+            />
             <p className="text-xs text-stone-600 mb-1">
-              <span className="text-emerald-600 font-medium">Click to upload</span> or drag and drop
+              <span className="text-emerald-600 font-medium">
+                Click to upload
+              </span>{" "}
+              or drag and drop
             </p>
-            <p className="text-xs text-stone-400">PDF, DOCX, JPEG, PNG up to 25MB</p>
-            
+            <p className="text-xs text-stone-400">
+              PDF, DOCX, JPEG, PNG up to 25MB
+            </p>
+
             {/* Hidden file input */}
             <input
               id="fileInput"
@@ -441,14 +517,14 @@ const SubmissionForm: React.FC = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                
+
                 <p className="text-xs text-emerald-600 mt-2 text-center">
                   ✓ File will be saved with your submission
                 </p>
               </div>
             </div>
           )}
-          
+
           {errors.attachments && (
             <p className="text-xs text-red-500 mt-1">{errors.attachments}</p>
           )}
@@ -457,13 +533,13 @@ const SubmissionForm: React.FC = () => {
         {/* Submit */}
         <button
           type="submit"
-          disabled={isOtpLoading}
+          disabled={isOtpLoading || isCreatingSubmission}
           className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isOtpLoading ? (
+          {isOtpLoading || isCreatingSubmission ? (
             <>
               <span className="animate-spin">⟳</span>
-              Sending OTP...
+              {isOtpLoading ? "Sending OTP..." : "Sending response..."}
             </>
           ) : (
             <>
@@ -474,10 +550,14 @@ const SubmissionForm: React.FC = () => {
         </button>
 
         <p className="text-xs text-center text-stone-500">
-          By submitting, you agree to our{' '}
-          <a href="#" className="text-emerald-600 hover:underline">Terms</a>
-          {' '}&{' '}
-          <a href="#" className="text-emerald-600 hover:underline">Privacy Policy</a>
+          By submitting, you agree to our{" "}
+          <a href="#" className="text-emerald-600 hover:underline">
+            Terms
+          </a>{" "}
+          &{" "}
+          <a href="#" className="text-emerald-600 hover:underline">
+            Privacy Policy
+          </a>
         </p>
       </form>
     </div>

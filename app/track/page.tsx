@@ -15,11 +15,14 @@ import StatusBadge from "@/components/StatusBadge";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useGetSubmissionByTrackingNumberQuery } from "@/app/api/submissionsApi";
+import dayjs from "dayjs";
 
 function TrackingContent() {
   const searchParams = useSearchParams();
   const [trackingId, setTrackingId] = useState("");
-  const [activeTab, setActiveTab] = useState<"status" | "description">("status");
+  const [activeTab, setActiveTab] = useState<"status" | "description">(
+    "status",
+  );
   const [searchTrigger, setSearchTrigger] = useState(false);
 
   // Use the query hook with skip option
@@ -61,28 +64,16 @@ function TrackingContent() {
     const timeline = [
       {
         status: "Submitted",
-        date: new Date(submission.createdAt).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
+        date: dayjs(submission.createdAt).format("MMM DD, YYYY"),
         description: "Submission received and logged into system",
         completed: true,
       },
       {
         status: "Under Review",
-        date: submission.reviewDate 
-          ? new Date(submission.reviewDate).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })
+        date: submission.reviewDate
+          ? dayjs(submission.reviewDate).format("MMM DD, YYYY")
           : "Pending",
-        description: submission.department 
+        description: submission.department
           ? `Assigned to ${submission.department} for initial review`
           : "Assigned for initial review",
         completed: !!submission.reviewDate,
@@ -90,14 +81,8 @@ function TrackingContent() {
       },
       {
         status: "Processing",
-        date: submission.processingDate 
-          ? new Date(submission.processingDate).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })
+        date: submission.processingDate
+          ? dayjs(submission.processingDate).format("MMM DD, YYYY")
           : "Pending",
         description: "Detailed assessment and verification",
         completed: !!submission.processingDate,
@@ -105,14 +90,8 @@ function TrackingContent() {
       },
       {
         status: "Decision",
-        date: submission.decisionDate 
-          ? new Date(submission.decisionDate).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })
+        date: submission.decisionDate
+          ? dayjs(submission.decisionDate).format("MMM DD, YYYY")
           : "Pending",
         description: "Final decision and response preparation",
         completed: !!submission.decisionDate,
@@ -120,14 +99,8 @@ function TrackingContent() {
       },
       {
         status: "Completed",
-        date: submission.completedDate 
-          ? new Date(submission.completedDate).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })
+        date: submission.completedDate
+          ? dayjs(submission.completedDate).format("MMM DD, YYYY")
           : "Pending",
         description: "Resolution communicated to submitter",
         completed: !!submission.completedDate,
@@ -141,34 +114,40 @@ function TrackingContent() {
   // Calculate last updated time
   const getLastUpdated = () => {
     if (!submission) return "Unknown";
-    
+
     const lastUpdated = submission.updatedAt || submission.createdAt;
     const now = new Date();
     const updated = new Date(lastUpdated);
-    const diffInHours = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60));
-    
+    const diffInHours = Math.floor(
+      (now.getTime() - updated.getTime()) / (1000 * 60 * 60),
+    );
+
     if (diffInHours < 1) {
-      const diffInMinutes = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60));
-      return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
+      const diffInMinutes = Math.floor(
+        (now.getTime() - updated.getTime()) / (1000 * 60),
+      );
+      return `${diffInMinutes} minute${diffInMinutes !== 1 ? "s" : ""} ago`;
     } else if (diffInHours < 24) {
-      return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+      return `${diffInHours} hour${diffInHours !== 1 ? "s" : ""} ago`;
     } else {
       const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
+      return `${diffInDays} day${diffInDays !== 1 ? "s" : ""} ago`;
     }
   };
 
   // Get expected response time
   const getExpectedResponse = () => {
     if (!submission) return "Unknown";
-    
+
     const created = new Date(submission.createdAt);
     const expected = new Date(created);
     expected.setDate(expected.getDate() + (submission.expectedDays || 5));
-    
+
     const today = new Date();
-    const diffInDays = Math.ceil((expected.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const diffInDays = Math.ceil(
+      (expected.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     if (diffInDays <= 0) {
       return "Today";
     } else if (diffInDays === 1) {
@@ -229,10 +208,10 @@ function TrackingContent() {
                   Submission Not Found
                 </h3>
                 <p className="text-red-600 text-sm">
-                  {error && 'data' in error 
-                    ? (error.data as any)?.message || "The tracking ID you entered could not be found."
-                    : "The tracking ID you entered could not be found."
-                  }
+                  {error && "data" in error
+                    ? (error.data as any)?.message ||
+                      "The tracking ID you entered could not be found."
+                    : "The tracking ID you entered could not be found."}
                 </p>
                 <p className="text-red-500 text-sm mt-2">
                   Please check the tracking ID and try again.
@@ -248,21 +227,23 @@ function TrackingContent() {
             {/* Header */}
             <div className="px-6 py-5 border-b border-stone-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center gap-3 mb-1 capitalize">
                   <span className="font-mono text-lg font-bold text-emerald-700">
                     {submission.trackingNumber || trackingId}
                   </span>
                   <StatusBadge status={submission.status || "pending"} />
                 </div>
                 <p className="text-stone-600 text-sm">
-                  {submission.projectTitle || submission.title || "Submission Details"}
+                  {submission.projectTitle ||
+                    submission.title ||
+                    "Submission Details"}
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
                     // Implement download functionality
-                    const link = document.createElement('a');
+                    const link = document.createElement("a");
                     link.href = `/api/submissions/${submission.id}/acknowledgement`;
                     link.download = `acknowledgement-${submission.trackingNumber}.pdf`;
                     link.click();
@@ -328,7 +309,9 @@ function TrackingContent() {
                           {i < array.length - 1 && (
                             <div
                               className={`w-0.5 flex-1 mt-2 ${
-                                item.completed ? "bg-emerald-300" : "bg-stone-200"
+                                item.completed
+                                  ? "bg-emerald-300"
+                                  : "bg-stone-200"
                               }`}
                             />
                           )}
@@ -343,14 +326,18 @@ function TrackingContent() {
                           <div className="flex items-center justify-between">
                             <p
                               className={`font-medium ${
-                                item.completed ? "text-stone-800" : "text-stone-400"
+                                item.completed
+                                  ? "text-stone-800"
+                                  : "text-stone-400"
                               }`}
                             >
                               {item.status}
                             </p>
                             <span
                               className={`text-xs ${
-                                item.completed ? "text-stone-500" : "text-stone-300"
+                                item.completed
+                                  ? "text-stone-500"
+                                  : "text-stone-300"
                               }`}
                             >
                               {item.date}
@@ -358,7 +345,9 @@ function TrackingContent() {
                           </div>
                           <p
                             className={`text-sm mt-1 ${
-                              item.completed ? "text-stone-600" : "text-stone-400"
+                              item.completed
+                                ? "text-stone-600"
+                                : "text-stone-400"
                             }`}
                           >
                             {item.description}
@@ -388,8 +377,8 @@ function TrackingContent() {
                         {/* <p className="font-medium text-stone-800">
                           {getExpectedResponse()}
                         </p> */}
-                          <p className="font-medium text-stone-800">
-                       Within 3 days
+                        <p className="font-medium text-stone-800">
+                          Within 3 days
                         </p>
                       </div>
                       <div>
@@ -411,12 +400,16 @@ function TrackingContent() {
                   <div className="space-y-4">
                     <div>
                       <p className="text-sm text-stone-600 whitespace-pre-line">
-                        {submission.description || submission.projectDescription || "No description available."}
+                        {submission.description ||
+                          submission.projectDescription ||
+                          "No description available."}
                       </p>
                     </div>
-                    
+
                     {/* Additional details if available */}
-                    {(submission.category || submission.location || submission.submitterName) && (
+                    {(submission.category ||
+                      submission.location ||
+                      submission.submitterName) && (
                       <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-stone-200">
                         {submission.category && (
                           <div>
@@ -436,7 +429,9 @@ function TrackingContent() {
                         )}
                         {submission.submitterName && (
                           <div className="md:col-span-2">
-                            <p className="text-stone-500 text-sm">Submitted By</p>
+                            <p className="text-stone-500 text-sm">
+                              Submitted By
+                            </p>
                             <p className="font-medium text-stone-800 text-sm">
                               {submission.submitterName}
                             </p>
@@ -455,7 +450,10 @@ function TrackingContent() {
           <div className="text-center text-stone-500 text-sm">
             <p>
               Can't find your tracking ID? Check your email confirmation or{" "}
-              <Link href="/contact" className="text-emerald-600 hover:underline">
+              <Link
+                href="/contact"
+                className="text-emerald-600 hover:underline"
+              >
                 contact support
               </Link>
             </p>

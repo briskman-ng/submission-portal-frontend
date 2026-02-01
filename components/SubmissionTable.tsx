@@ -1,15 +1,20 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Eye, Download, FileText } from 'lucide-react';
-import StatusBadge from './StatusBadge';
-import { Submission } from '@/lib/types';
+import Link from "next/link";
+import { Eye, Download, FileText } from "lucide-react";
+import StatusBadge from "./StatusBadge";
+import { Submissions } from "@/types/submissions.type";
+import dayjs from "dayjs";
 
 interface SubmissionsTableProps {
-  submissions: Submission[];
+  submissions: Submissions[];
+  isLoading?: boolean;
 }
 
-export default function SubmissionsTable({ submissions }: SubmissionsTableProps) {
+export default function SubmissionsTable({
+  submissions,
+  isLoading,
+}: SubmissionsTableProps) {
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -41,37 +46,54 @@ export default function SubmissionsTable({ submissions }: SubmissionsTableProps)
           </thead>
           <tbody className="divide-y divide-stone-100">
             {submissions.map((submission) => (
-              <tr key={submission.id} className="hover:bg-stone-50 transition-colors">
+              <tr
+                key={submission.id}
+                className="hover:bg-stone-50 transition-colors"
+              >
                 <td className="px-6 py-4 max-w-[120px] truncate">
-                  <span className="font-mono text-sm font-medium text-emerald-700">{submission.trackingId}</span>
+                  <span className="font-mono text-sm font-medium text-emerald-700">
+                    {submission.trackingNumber}
+                  </span>
                 </td>
+
                 <td className="px-6 py-4 max-w-[250px] truncate">
-                  <p className="text-sm text-stone-800 font-medium">{submission.subject}</p>
+                  <p className="text-sm text-stone-800 font-medium">
+                    {submission.title}
+                  </p>
                 </td>
+
                 <td className="px-6 py-4">
-                  <span className="text-sm text-stone-600">{submission.type}</span>
+                  <span className="text-sm text-stone-600">
+                    {submission.type}
+                  </span>
                 </td>
-                <td className="px-6 py-4">
+
+                <td className="px-6 py-4 capitalize">
                   <StatusBadge status={submission.status} />
                 </td>
+
                 <td className="px-6 py-4">
-                  <span className="text-sm text-stone-500">{submission.date}</span>
+                  <span className="text-sm text-stone-500">
+                    {dayjs(submission.submittedAt).format("MMM DD, YYYY")}
+                  </span>
                 </td>
+
                 <td className="px-6 py-4">
                   <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-md text-xs font-medium transition-colors">
                     Preview
                   </button>
                 </td>
+
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <Link 
-                      href={`/track?id=${submission.trackingId}`}
+                    <Link
+                      href={`/track?id=${submission.trackingNumber}`}
                       className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                       title="View Details"
                     >
                       <Eye className="w-4 h-4" />
                     </Link>
-                    <Link 
+                    <Link
                       href="/acknowledgement"
                       className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                       title="Download"
@@ -88,7 +110,9 @@ export default function SubmissionsTable({ submissions }: SubmissionsTableProps)
         {submissions.length === 0 && (
           <div className="py-12 text-center">
             <FileText className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-            <p className="text-stone-500">No submissions found</p>
+            <p className="text-stone-500">
+              {isLoading ? "Loading submissions..." : "No submissions found"}
+            </p>
           </div>
         )}
       </div>
