@@ -11,7 +11,7 @@ import { useEffect } from "react";
 import { toast } from "react-toastify";
 import useLogOut from "@/hooks/useLogOut";
 
-export default function DashboardPage({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;

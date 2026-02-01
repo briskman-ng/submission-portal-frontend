@@ -24,6 +24,16 @@ export const authApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/v1/auth",
 });
 
+export const adminApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/v1/admin",
+});
+export const adminAuthApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/v1/admin/auth",
+});
+export const adminSubmissionsApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/v1/admin/submissions",
+});
+
 const reqInterceptorFn = function (config: InternalAxiosRequestConfig) {
   const excludedRoutes = [
     "/auth/login",
@@ -50,7 +60,9 @@ const reqInterceptorFn = function (config: InternalAxiosRequestConfig) {
   return config;
 };
 
-[api, authApi].forEach((el) => el.interceptors.request.use(reqInterceptorFn));
+[api, authApi, adminApi, adminAuthApi, adminSubmissionsApi].forEach((el) =>
+  el.interceptors.request.use(reqInterceptorFn),
+);
 
 export function post<TData = unknown, TResponse = unknown>(
   axiosInstance: AxiosInstance,

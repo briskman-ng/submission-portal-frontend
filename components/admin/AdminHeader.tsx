@@ -1,7 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Bell, Search, ChevronDown, User, Settings, LogOut } from 'lucide-react';
+import { useMemo, useState } from "react";
+import {
+  Bell,
+  Search,
+  ChevronDown,
+  User,
+  Settings,
+  LogOut,
+} from "lucide-react";
+import useAdminUserStore from "@/store/admin/admin-user-store";
+import useLogOut from "@/hooks/useLogOut";
 
 interface AdminHeaderProps {
   title: string;
@@ -9,13 +18,38 @@ interface AdminHeaderProps {
 }
 
 const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle }) => {
+  const user = useAdminUserStore((state) => state.user);
+
+  const name = useMemo(() => {
+    const [firstName, lastName] = user?.adminUser.name.split(" ") ?? [];
+
+    return { firstName, lastName };
+  }, [user]);
+
+  const logout = useLogOut();
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
   const notifications = [
-    { id: 1, message: 'New submission received - NDDC-2024-00848', time: '2 min ago', unread: true },
-    { id: 2, message: 'Submission NDDC-2024-00845 marked as urgent', time: '1 hour ago', unread: true },
-    { id: 3, message: 'Monthly report ready for review', time: '3 hours ago', unread: false },
+    {
+      id: 1,
+      message: "New submission received - NDDC-2024-00848",
+      time: "2 min ago",
+      unread: true,
+    },
+    {
+      id: 2,
+      message: "Submission NDDC-2024-00845 marked as urgent",
+      time: "1 hour ago",
+      unread: true,
+    },
+    {
+      id: 3,
+      message: "Monthly report ready for review",
+      time: "3 hours ago",
+      unread: false,
+    },
   ];
 
   return (
@@ -23,8 +57,12 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle }) => {
       <div className="flex items-center justify-between">
         {/* Title */}
         <div>
-          <h1 className="font-display text-2xl font-semibold text-stone-900">{title}</h1>
-          {subtitle && <p className="text-stone-500 text-sm mt-0.5">{subtitle}</p>}
+          <h1 className="font-display text-2xl font-semibold text-stone-900">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-stone-500 text-sm mt-0.5">{subtitle}</p>
+          )}
         </div>
 
         {/* Right Section */}
@@ -52,18 +90,22 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle }) => {
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-stone-100">
-                  <h3 className="font-semibold text-stone-800">Notifications</h3>
+                  <h3 className="font-semibold text-stone-800">
+                    Notifications
+                  </h3>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {notifications.map((notif) => (
-                    <div 
+                    <div
                       key={notif.id}
                       className={`px-4 py-3 hover:bg-stone-50 cursor-pointer border-b border-stone-50 ${
-                        notif.unread ? 'bg-emerald-50/50' : ''
+                        notif.unread ? "bg-emerald-50/50" : ""
                       }`}
                     >
                       <p className="text-sm text-stone-700">{notif.message}</p>
-                      <p className="text-xs text-stone-400 mt-1">{notif.time}</p>
+                      <p className="text-xs text-stone-400 mt-1">
+                        {notif.time}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -83,11 +125,18 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle }) => {
               className="flex items-center gap-3 px-3 py-2 hover:bg-stone-100 rounded-lg transition-colors"
             >
               <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">AO</span>
+                <span className="text-white text-sm font-medium">
+                  {name?.firstName?.[0]}
+                  {name?.lastName?.[0]}
+                </span>
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-stone-800">Adaeze Okonkwo</p>
-                <p className="text-xs text-stone-500">Super Admin</p>
+                <p className="text-sm font-medium text-stone-800">
+                  {user?.adminUser.name}
+                </p>
+                <p className="text-xs text-stone-500 capitalize">
+                  {user?.adminUser.role.replaceAll("_", " ")}
+                </p>
               </div>
               <ChevronDown className="w-4 h-4 text-stone-400" />
             </button>
@@ -95,8 +144,12 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle }) => {
             {showProfile && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-stone-100">
-                  <p className="font-medium text-stone-800">Adaeze Okonkwo</p>
-                  <p className="text-sm text-stone-500">adaeze.okonkwo@nddc.gov.ng</p>
+                  <p className="font-medium text-stone-800">
+                    {user?.adminUser.name}
+                  </p>
+                  <p className="text-sm text-stone-500">
+                    {user?.adminUser.email}
+                  </p>
                 </div>
                 <div className="py-1">
                   <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">
@@ -109,7 +162,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle }) => {
                   </button>
                 </div>
                 <div className="border-t border-stone-100 py-1">
-                  <button className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                  <button
+                    onClick={logout}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
                     <LogOut className="w-4 h-4" />
                     Sign Out
                   </button>
