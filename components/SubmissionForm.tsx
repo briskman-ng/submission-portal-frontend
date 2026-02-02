@@ -62,10 +62,10 @@ const SubmissionForm: React.FC = () => {
   );
 
   const submissionTypes: SubmissionType[] = [
-    { id: "Proposal", label: "Project Proposal", icon: FileText },
-    { id: "Report", label: "Progress Report", icon: BarChart3 },
-    { id: "Request", label: "Formal Request", icon: Send },
-    { id: "Complaint", label: "Complaint/Feedback", icon: MessageSquare },
+    { id: "project_proposal", label: "Project Proposal", icon: FileText },
+    { id: "report", label: "Progress Report", icon: BarChart3 },
+    { id: "request", label: "Formal Request", icon: Send },
+    { id: "complaint", label: "Complaint/Feedback", icon: MessageSquare },
   ];
 
   const handleSubmit = async (e?: React.FormEvent) => {

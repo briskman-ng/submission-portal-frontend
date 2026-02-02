@@ -294,7 +294,7 @@ export default function AdminDashboardPage() {
               count: formatNumber(
                 dashboardStatistics?.stats.newSubmissions ?? 0,
               ),
-              href: "/admin/submissions?status=new",
+              href: adminRoutes.submissions() + "?status=new",
               color: "border-blue-500",
             },
             {
@@ -302,7 +302,7 @@ export default function AdminDashboardPage() {
               count: formatNumber(
                 dashboardStatistics?.stats.urgentSubmissions ?? 0,
               ),
-              href: "/admin/submissions?priority=urgent",
+              href: adminRoutes.submissions() + "?status=urgent",
               color: "border-red-500",
             },
             {
@@ -310,15 +310,15 @@ export default function AdminDashboardPage() {
               count: formatNumber(
                 dashboardStatistics?.stats.pendingSubmissions ?? 0,
               ),
-              href: "/admin/submissions?status=in-review",
+              href: adminRoutes.submissions() + "?status=pending",
               color: "border-amber-500",
             },
             {
-              label: "This Week",
+              label: "Reviewing",
               count: formatNumber(
-                dashboardStatistics?.stats.thisWeekSubmissions ?? 0,
+                dashboardStatistics?.stats.inReviewSubmissions ?? 0,
               ),
-              href: "/admin/submissions?range=week",
+              href: adminRoutes.submissions() + "?status=in_review",
               color: "border-emerald-500",
             },
           ].map((action, i) => (
