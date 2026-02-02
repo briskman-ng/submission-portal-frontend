@@ -43,7 +43,7 @@ export default function AdminDashboardLayout({
     return <></>;
   }
 
-  if (user && user?.adminUser?.role !== "super_admin") {
+  if (user && !user?.adminUser) {
     toast.error("Access denied");
     logout();
     return <></>;
