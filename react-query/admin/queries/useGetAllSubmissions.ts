@@ -8,10 +8,10 @@ const getAllSubmissions = getAll<{ submissions: Submissions[] }>(
   "",
 );
 
-const useGetAllSubmissions = () => {
+const useGetAllSubmissions = (filters?: { page?: number }) => {
   return useQuery({
-    queryFn: () => getAllSubmissions(),
-    queryKey: [queryKeys.GET_ALL_SUBMISSIONS],
+    queryFn: () => getAllSubmissions(filters),
+    queryKey: [queryKeys.GET_ALL_SUBMISSIONS, filters],
   });
 };
 

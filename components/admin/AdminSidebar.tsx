@@ -33,8 +33,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const navItems = [
     { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: adminRoutes.submissions(), icon: FileText, label: "Submissions" },
-    { href: "/admin/users", icon: Users, label: "Admin Users" },
-    { href: "/admin/activity", icon: Activity, label: "Activity Log" },
+    // { href: "/admin/users", icon: Users, label: "Admin Users" },
+    // { href: "/admin/activity", icon: Activity, label: "Activity Log" },
   ];
 
   const isActive = (href: string) => {

@@ -21,6 +21,9 @@ import useGetAllSubmissions from "@/react-query/admin/queries/useGetAllSubmissio
 import dayjs from "dayjs";
 import { statusOptions } from "@/components/admin/submission-actions/change-status.component";
 import { priorityOptions } from "@/components/admin/submission-actions/set-submission-priority.component";
+import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/utils/util";
+import getPaginationRange from "@/utils/getPaginationRange";
 
 export default function SubmissionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,10 +39,13 @@ export default function SubmissionsPage() {
   const [sortBy, setSortBy] = useState<"date" | "priority" | "status">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const { data: submissionsData, isLoading: isLoadingSubmissions } =
-    useGetAllSubmissions();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  console.log(submissionsData);
+  const page = Number(searchParams.get("page") ?? 1);
+
+  const { data: submissionsData, isLoading: isLoadingSubmissions } =
+    useGetAllSubmissions({ page });
 
   const filteredSubmissions = useMemo(() => {
     let result = [...(submissionsData?.submissions ?? [])];
@@ -170,6 +176,23 @@ export default function SubmissionsPage() {
     filters.priority ||
     filters.dateRange !== "all";
 
+  const start = useMemo(() => {
+    if (!submissionsData) return 0;
+    return (submissionsData.page - 1) * submissionsData.limit + 1;
+  }, [submissionsData]);
+  const end = useMemo(() => {
+    if (!submissionsData) return 0;
+    return Math.min(
+      submissionsData.page * submissionsData.limit,
+      submissionsData.total,
+    );
+  }, [submissionsData]);
+
+  const pages = useMemo(() => {
+    if (!submissionsData) return [];
+    return getPaginationRange(submissionsData.page, submissionsData.totalPages);
+  }, [submissionsData]);
+
   return (
     <>
       <AdminHeader
@@ -179,7 +202,7 @@ export default function SubmissionsPage() {
 
       <div className="p-6">
         {/* Search and Filters Bar */}
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm mb-6">
+        <div className="bg-white rounded-xl border border-stone-200 shadow-sm mb-6 hidden">
           <div className="p-4">
             <div className="flex flex-col lg:flex-row gap-4">
               {/* Search */}
@@ -423,6 +446,7 @@ export default function SubmissionsPage() {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-stone-100">
                 {filteredSubmissions.map((submission) => (
                   <tr
@@ -469,7 +493,7 @@ export default function SubmissionsPage() {
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-nowrap">
                       <span
                         className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(submission.status)}`}
                       >
@@ -481,7 +505,7 @@ export default function SubmissionsPage() {
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-nowrap">
                       <div className="text-sm text-stone-500">
                         {dayjs(submission.submittedAt).format("DD MMM YYYY")}
                       </div>
@@ -528,26 +552,44 @@ export default function SubmissionsPage() {
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-stone-200 bg-stone-50">
             <p className="text-sm text-stone-500">
-              Showing{" "}
-              <span className="font-medium">{filteredSubmissions.length}</span>{" "}
-              of <span className="font-medium">{submissionsData?.total}</span>{" "}
-              submissions
+              Showing {start}–{end} of {submissionsData?.total} submissions
             </p>
 
             <div className="flex items-center gap-2">
               <button
                 className="px-3 py-1.5 text-sm text-stone-600 hover:bg-white rounded border border-stone-300 disabled:opacity-50"
-                disabled
+                disabled={page === 1}
+                onClick={() => router.push(`?page=${page - 1}`)}
               >
                 Previous
               </button>
-              <button className="px-3 py-1.5 text-sm text-white bg-emerald-700 rounded">
-                1
-              </button>
-              <button className="px-3 py-1.5 text-sm text-stone-600 hover:bg-white rounded border border-stone-300">
-                2
-              </button>
-              <button className="px-3 py-1.5 text-sm text-stone-600 hover:bg-white rounded border border-stone-300">
+
+              {pages.map((p, i) =>
+                p === "dots" ? (
+                  <span key={`dots-${i}`} className="px-2 text-stone-400">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => router.push(`?page=${p}`)}
+                    className={cn(
+                      "px-3 py-1.5 text-sm rounded",
+                      p === page
+                        ? "text-white bg-emerald-700"
+                        : "text-stone-600 hover:bg-white border border-stone-300",
+                    )}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+
+              <button
+                className="px-3 py-1.5 text-sm text-stone-600 hover:bg-white rounded border border-stone-300"
+                disabled={page === submissionsData?.totalPages}
+                onClick={() => router.push(`?page=${page + 1}`)}
+              >
                 Next
               </button>
             </div>
