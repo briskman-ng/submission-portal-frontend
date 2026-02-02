@@ -34,6 +34,7 @@ export interface Submission {
     size: string;
     uploadedAt: string;
     submissionId: string;
+    downloadUrl: string;
   }[];
   auditEntries: {
     id: string;

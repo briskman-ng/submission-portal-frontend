@@ -278,9 +278,16 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                               <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-white rounded-lg transition-colors">
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-colors">
+
+                              <a
+                                href={file.downloadUrl}
+                                download={file.originalName}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="cursor-pointer p-2 text-stone-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-colors"
+                              >
                                 <Download className="w-4 h-4" />
-                              </button>
+                              </a>
                             </div>
                           </div>
                         ))}
