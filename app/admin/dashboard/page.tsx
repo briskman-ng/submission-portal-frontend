@@ -30,7 +30,7 @@ import { SubmissionStatusStats } from "@/types/admin/submission-status-stats.typ
 import useGetDashboardStatistics from "@/react-query/admin/queries/useGetDashboardStatistics";
 
 const typeLabels: Record<string, string> = {
-  proposal: "Project Proposal",
+  project_proposal: "Project Proposal",
   report: "Progress Report",
   request: "Formal Request",
   complaint: "Complaint/Feedback",
@@ -224,9 +224,10 @@ export default function AdminDashboardPage() {
                     <p className="text-sm text-stone-800 font-medium truncate">
                       {submission.title}
                     </p>
-                    <p className="text-xs text-stone-500 mt-1">
+                    <p className="text-xs text-stone-500 mt-1 capitalize">
                       {submission.user?.name} •{" "}
-                      {typeLabels[submission.type.toLowerCase()]}
+                      {typeLabels[submission.type.toLowerCase()] ??
+                        submission.type.replaceAll("_", " ")}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">

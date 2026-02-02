@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 // Allowed submission types
-const submissionTypes = ["Proposal", "Report", "Request", "Complaint"] as const;
+const submissionTypes = [
+  "project_proposal",
+  "report",
+  "request",
+  "complaint",
+] as const;
 
 export const submissionSchema = z.object({
   // Use string validation with refine instead of enum

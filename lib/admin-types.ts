@@ -19,7 +19,11 @@ export interface AdminUser {
    SUBMISSION CORE TYPES
 ======================= */
 
-export type SubmissionType = "proposal" | "report" | "request" | "complaint";
+export type SubmissionType =
+  | "project_proposal"
+  | "report"
+  | "request"
+  | "complaint";
 
 export type SubmissionStatus =
   | "new"
@@ -59,7 +63,7 @@ export interface TypeOption {
 ======================= */
 
 export const typeOptions: TypeOption[] = [
-  { value: "proposal", label: "Project Proposal" },
+  { value: "project_proposal", label: "Project Proposal" },
   { value: "report", label: "Progress Report" },
   { value: "request", label: "Formal Request" },
   { value: "complaint", label: "Complaint / Feedback" },
