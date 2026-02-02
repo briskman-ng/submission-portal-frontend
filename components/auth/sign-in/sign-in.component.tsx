@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
 interface IProps {
+  onSuccess?: () => void;
   defaultValues?: { email: string; name: string; onSuccess: () => void };
 }
 
-export default function SignInComponent({ defaultValues }: IProps) {
+export default function SignInComponent({ onSuccess, defaultValues }: IProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -23,15 +24,22 @@ export default function SignInComponent({ defaultValues }: IProps) {
       setStep("otp");
     }, 100),
   );
+
   const { mutate: verifyOTP, isPending: isVerifyingOTP } = useVerifyOTP(() => {
     if (defaultValues) {
       setTimeout(() => {
         defaultValues?.onSuccess();
       }, 500);
     } else {
-      setTimeout(() => {
-        router.push(routes.dashboard());
-      }, 100);
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess();
+        }, 200);
+      } else {
+        setTimeout(() => {
+          router.push(routes.dashboard());
+        }, 100);
+      }
     }
   });
 
