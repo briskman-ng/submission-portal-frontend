@@ -1,9 +1,9 @@
 import { adminSubmissionsApi, get } from "@/react-query";
 import { useQuery } from "@tanstack/react-query";
 import queryKeys from "../queryKeys";
-import { TodayDashboardStatistics } from "@/types/admin/today-dashboard-statistics.type";
+import { Stats } from "@/types/admin/dashboard-statistics.type";
 
-const getTodayDashboardStatistics = get<TodayDashboardStatistics>(
+const getTodayDashboardStatistics = get<Stats>(
   adminSubmissionsApi,
   "/dashboard/today",
 );

@@ -79,7 +79,7 @@ const SubmissionForm: React.FC = () => {
       if (user) {
         const fd = new FormData();
 
-        fd.append("type", formData.type);
+        fd.append("type", formData.type.toLowerCase());
         fd.append("title", formData.subject);
         fd.append("description", formData.description);
 
@@ -485,7 +485,7 @@ const SubmissionForm: React.FC = () => {
             onSuccess: () => {
               const fd = new FormData();
 
-              fd.append("type", formData.type);
+              fd.append("type", formData.type.toLowerCase());
               fd.append("title", formData.subject);
               fd.append("description", formData.description);
 
