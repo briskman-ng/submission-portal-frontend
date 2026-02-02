@@ -181,7 +181,6 @@
 //   );
 // }
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -199,24 +198,27 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useGetSubmissionByTrackingNumberQuery } from "@/app/api/submissionsApi";
+import routes from "@/helpers/routes";
 
 export default function SuccessPage() {
   const [copied, setCopied] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState<string | null>(null);
-  
+
   // Get tracking number from sessionStorage
   useEffect(() => {
-    const savedTrackingNumber = sessionStorage.getItem("lastSubmissionTrackingId");
+    const savedTrackingNumber = sessionStorage.getItem(
+      "lastSubmissionTrackingId",
+    );
     if (savedTrackingNumber) {
       setTrackingNumber(savedTrackingNumber);
     }
   }, []);
 
   // Fetch the specific submission by tracking number
-  const { 
-    data: submissionData, 
-    isLoading, 
-    error 
+  const {
+    data: submissionData,
+    isLoading,
+    error,
   } = useGetSubmissionByTrackingNumberQuery(trackingNumber!, {
     skip: !trackingNumber, // Skip if no trackingNumber
   });
@@ -225,7 +227,7 @@ export default function SuccessPage() {
   const getTypeLabel = (type: string) => {
     const typeLabels: Record<string, string> = {
       Proposal: "Project Proposal",
-      Report: "Progress Report", 
+      Report: "Progress Report",
       Request: "Formal Request",
       Complaint: "Complaint/Feedback",
     };
@@ -273,7 +275,9 @@ export default function SuccessPage() {
               </div>
               <div className="p-8 text-center">
                 <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mx-auto" />
-                <p className="text-stone-600 mt-4">Fetching your submission details...</p>
+                <p className="text-stone-600 mt-4">
+                  Fetching your submission details...
+                </p>
               </div>
             </div>
           </div>
@@ -328,7 +332,10 @@ export default function SuccessPage() {
                   </p>
                 </div>
                 <div className="text-center text-stone-500">
-                  <p>Could not load full details. Please save your tracking ID for reference.</p>
+                  <p>
+                    Could not load full details. Please save your tracking ID
+                    for reference.
+                  </p>
                 </div>
                 <Link
                   href="/"
@@ -358,7 +365,8 @@ export default function SuccessPage() {
   });
 
   // Use tracking number from API response if available, otherwise use stored one
-  const displayTrackingId = submission?.trackingNumber || submission?.trackingId || trackingNumber;
+  const displayTrackingId =
+    submission?.trackingNumber || submission?.trackingId || trackingNumber;
 
   return (
     <>
@@ -423,46 +431,50 @@ export default function SuccessPage() {
                   <div className="bg-stone-50 rounded-lg p-3">
                     <p className="text-stone-500">Type</p>
                     <p className="font-medium text-stone-800">
-                      {submission?.type ? getTypeLabel(submission.type) : "Not specified"}
+                      {submission?.type
+                        ? getTypeLabel(submission.type)
+                        : "Not specified"}
                     </p>
                   </div>
                   <div className="bg-stone-50 rounded-lg p-3">
                     <p className="text-stone-500">Status</p>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      submission?.status === 'approved' 
-                        ? 'bg-green-100 text-green-800'
-                        : submission?.status === 'rejected'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {submission?.status 
-                        ? submission.status.charAt(0).toUpperCase() + submission.status.slice(1)
-                        : 'Pending'
-                      }
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        submission?.status === "approved"
+                          ? "bg-green-100 text-green-800"
+                          : submission?.status === "rejected"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {submission?.status
+                        ? submission.status.charAt(0).toUpperCase() +
+                          submission.status.slice(1)
+                        : "Pending"}
                     </span>
                   </div>
                   <div className="bg-stone-50 rounded-lg p-3 col-span-2">
                     <p className="text-stone-500">Subject</p>
                     <p className="font-medium text-stone-800">
-                      {submission?.title || submission?.subject || "No title provided"}
+                      {submission?.title ||
+                        submission?.subject ||
+                        "No title provided"}
                     </p>
                   </div>
                   <div className="bg-stone-50 rounded-lg p-3">
                     <p className="text-stone-500">Submitted Date</p>
                     <p className="font-medium text-stone-800">
-                      {submission?.createdAt 
+                      {submission?.createdAt
                         ? formatDate(submission.createdAt).split(" at ")[0]
-                        : currentDate
-                      }
+                        : currentDate}
                     </p>
                   </div>
                   <div className="bg-stone-50 rounded-lg p-3">
                     <p className="text-stone-500">Submitted Time</p>
                     <p className="font-medium text-stone-800">
-                      {submission?.createdAt 
+                      {submission?.createdAt
                         ? formatDate(submission.createdAt).split(" at ")[1]
-                        : currentTime
-                      }
+                        : currentTime}
                     </p>
                   </div>
                 </div>
@@ -489,14 +501,14 @@ export default function SuccessPage() {
                 {/* View Full Submission Button */}
                 {displayTrackingId && (
                   <Link
-                    href={`/submissions/tracking/${displayTrackingId}`}
+                    href={routes.trackSubmission() + `?id=${displayTrackingId}`}
                     className="flex-1 bg-emerald-700 text-white py-3 rounded-lg font-semibold hover:bg-emerald-800 transition-colors flex items-center justify-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
-                    View Full Submission
+                    Track Submission
                   </Link>
                 )}
-                
+
                 {/* Download Acknowledgement Button */}
                 {/* <button
                   onClick={() => {

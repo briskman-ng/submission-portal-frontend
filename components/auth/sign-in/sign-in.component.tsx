@@ -1,15 +1,21 @@
 import routes from "@/helpers/routes";
 import useRequestOTP from "@/react-query/mutations/useRequestOTP";
 import useVerifyOTP from "@/react-query/mutations/useVerifyOTP";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import React, { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import React, { useEffect, useMemo, useState } from "react";
 
-export default function SignInComponent() {
+interface IProps {
+  onSuccess?: () => void;
+  defaultValues?: { email: string; name: string; onSuccess: () => void };
+}
+
+export default function SignInComponent({ onSuccess, defaultValues }: IProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [step, setStep] = useState<"email" | "otp">("email"); // 'email' or 'otp'
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultValues?.email || "");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
 
@@ -18,21 +24,34 @@ export default function SignInComponent() {
       setStep("otp");
     }, 100),
   );
-  const { mutate: verifyOTP, isPending: isVerifyingOTP } = useVerifyOTP(() =>
-    setTimeout(() => {
-      router.push(routes.dashboard());
-    }, 100),
-  );
+
+  const { mutate: verifyOTP, isPending: isVerifyingOTP } = useVerifyOTP(() => {
+    if (defaultValues) {
+      setTimeout(() => {
+        defaultValues?.onSuccess();
+      }, 500);
+    } else {
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess();
+        }, 200);
+      } else {
+        setTimeout(() => {
+          router.push(routes.dashboard());
+        }, 100);
+      }
+    }
+  });
 
   const loading = useMemo(() => {
     return isRequestingOTP || isVerifyingOTP;
   }, [isRequestingOTP, isVerifyingOTP]);
 
-  const handleEmailSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleEmailSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
     setError("");
 
-    requestOTP({ email });
+    requestOTP({ email, name: defaultValues?.name });
   };
 
   const handleOTPSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -73,6 +92,7 @@ export default function SignInComponent() {
               Email Address
             </label>
             <input
+              disabled={!!defaultValues}
               type="email"
               id="email"
               value={email}

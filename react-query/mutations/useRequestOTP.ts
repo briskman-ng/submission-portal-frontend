@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 interface IRequestOTPPayload {
   email: string;
+  name?: string;
 }
 
 const requestOTP = post<IRequestOTPPayload>(authApi, "/request-otp");

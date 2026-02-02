@@ -1,33 +1,35 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, post } from "..";
+import { post } from "..";
 import queryKeys from "../queryKeys";
 import { toast } from "react-toastify";
 import routes from "@/helpers/routes";
 import { useRouter } from "next/navigation";
-
-interface ICreateSubmissionPayload {
-  type: string;
-  title: string;
-  description: string;
-  files?: File[];
-}
+import axios from "axios";
+import { getItem } from "@/lib/sessionStorage";
 
 interface ICreateSubmissionResponse {
   id: string;
   trackingNumber: string;
 }
 
-const createSubmission = post<FormData, ICreateSubmissionResponse>(
-  api,
-  "/submissions",
-);
-
-const useCreateSubmission = (onSuccess?: () => void) => {
+const useCreateSubmissionForGuest = (onSuccess?: () => void) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
   return useMutation({
-    mutationFn: (body: FormData) => createSubmission({ body }),
+    mutationFn: async (body: FormData) => {
+      const accessToken = getItem("authToken");
+
+      return post<FormData, ICreateSubmissionResponse>(
+        axios,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/submissions`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      )({ body });
+    },
     onSuccess: (data) => {
       onSuccess?.();
       queryClient.invalidateQueries({
@@ -43,4 +45,4 @@ const useCreateSubmission = (onSuccess?: () => void) => {
   });
 };
 
-export default useCreateSubmission;
+export default useCreateSubmissionForGuest;
