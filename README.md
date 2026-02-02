@@ -164,4 +164,4 @@ This project is proprietary software developed for the Niger Delta Development C
 
 ## Support
 
-For technical support, contact the development team at [support@nddc.gov.ng](mailto:support@nddc.gov.ng)
+For technical support, contact the development team at [support@nddc.gov.ng](mailto:support@nddc.gov.ng).

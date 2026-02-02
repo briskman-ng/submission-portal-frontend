@@ -1,46 +1,55 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Users, 
-  Activity, 
-  Settings, 
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  Activity,
+  Settings,
   LogOut,
   ChevronLeft,
-  Bell
-} from 'lucide-react';
-import NDDCLogo from '@/components/NDDCLogo';
+  Bell,
+} from "lucide-react";
+import NDDCLogo from "@/components/NDDCLogo";
+import useLogOut from "@/hooks/useLogOut";
+import adminRoutes from "@/helpers/admin/routes";
 
 interface AdminSidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
 }
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed = false, onToggle }) => {
+const AdminSidebar: React.FC<AdminSidebarProps> = ({
+  collapsed = false,
+  onToggle,
+}) => {
   const pathname = usePathname();
 
+  const logout = useLogOut();
+
   const navItems = [
-    { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/admin/submissions', icon: FileText, label: 'Submissions' },
-    { href: '/admin/users', icon: Users, label: 'Admin Users' },
-    { href: '/admin/activity', icon: Activity, label: 'Activity Log' },
+    { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { href: adminRoutes.submissions(), icon: FileText, label: "Submissions" },
+    // { href: "/admin/users", icon: Users, label: "Admin Users" },
+    // { href: "/admin/activity", icon: Activity, label: "Activity Log" },
   ];
 
   const isActive = (href: string) => {
-    if (href === '/admin/dashboard') {
-      return pathname === '/admin/dashboard' || pathname === '/admin';
+    if (href === "/admin/dashboard") {
+      return pathname === "/admin/dashboard" || pathname === "/admin";
     }
     return pathname.startsWith(href);
   };
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen bg-emerald-950 text-white transition-all duration-300 z-40 ${
-      collapsed ? 'w-20' : 'w-64'
-    }`}>
+    <aside
+      className={`fixed left-0 top-0 h-screen bg-emerald-950 text-white transition-all duration-300 z-40 ${
+        collapsed ? "w-20" : "w-64"
+      }`}
+    >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-emerald-900">
         <NDDCLogo size="md" />
@@ -53,11 +62,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed = false, onToggle
       </div>
 
       {/* Toggle Button */}
-      <button 
+      <button
         onClick={onToggle}
         className="absolute -right-3 top-20 w-6 h-6 bg-emerald-700 rounded-full flex items-center justify-center hover:bg-emerald-600 transition-colors"
       >
-        <ChevronLeft className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+        <ChevronLeft
+          className={`w-4 h-4 transition-transform ${collapsed ? "rotate-180" : ""}`}
+        />
       </button>
 
       {/* Navigation */}
@@ -69,12 +80,14 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed = false, onToggle
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   isActive(item.href)
-                    ? 'bg-emerald-800 text-white'
-                    : 'text-emerald-300 hover:bg-emerald-900 hover:text-white'
+                    ? "bg-emerald-800 text-white"
+                    : "text-emerald-300 hover:bg-emerald-900 hover:text-white"
                 }`}
               >
                 <item.icon className="w-5 h-5 flex-shrink-0" />
-                {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+                {!collapsed && (
+                  <span className="text-sm font-medium">{item.label}</span>
+                )}
               </Link>
             </li>
           ))}
@@ -83,13 +96,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed = false, onToggle
 
       {/* Bottom Section */}
       <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-emerald-900">
-        <Link
-          href="/admin/login"
+        <button
+          onClick={logout}
           className="flex items-center gap-3 px-3 py-3 rounded-lg text-emerald-300 hover:bg-emerald-900 hover:text-white transition-colors"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span className="text-sm font-medium">Sign Out</span>}
-        </Link>
+        </button>
       </div>
     </aside>
   );
