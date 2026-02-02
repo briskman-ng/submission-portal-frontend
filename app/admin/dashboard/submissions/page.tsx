@@ -15,10 +15,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { mockSubmissions } from "@/lib/admin-mock-data";
-import { statusOptions, priorityOptions, typeOptions } from "@/lib/admin-types";
+import { typeOptions } from "@/lib/admin-types";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetAllSubmissions from "@/react-query/admin/queries/useGetAllSubmissions";
 import dayjs from "dayjs";
+import { statusOptions } from "@/components/admin/submission-actions/change-status.component";
+import { priorityOptions } from "@/components/admin/submission-actions/set-submission-priority.component";
 
 export default function SubmissionsPage() {
   const [searchQuery, setSearchQuery] = useState("");

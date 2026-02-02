@@ -178,7 +178,7 @@ export function put<TResponse, TBody = unknown>(
 
     const response = await axiosInstance.put(completeUrl, body);
 
-    return response.data.data;
+    return response.data;
   };
 }
 
@@ -206,6 +206,6 @@ export function patch<TResponse, TBody = unknown>(
 
     const response = await axiosInstance.patch(completeUrl, body);
 
-    return response.data.data;
+    return response.data;
   };
 }

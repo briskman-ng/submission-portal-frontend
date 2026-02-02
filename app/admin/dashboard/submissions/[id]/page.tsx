@@ -27,14 +27,19 @@ import {
   Eye,
 } from "lucide-react";
 import { mockSubmissions } from "@/lib/admin-mock-data";
-import {
-  statusOptions,
-  priorityOptions,
-  typeOptions,
-  departments,
-} from "@/lib/admin-types";
+import { typeOptions, departments } from "@/lib/admin-types";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetSubmissionDetailsByTrackingNumber from "@/react-query/admin/queries/useGetSubmissionDetailsByTrackingNumber";
+import { formatFileSize } from "@/utils/formatters";
+import StatusBadge from "@/components/status-badge/status-badge.component";
+import Modal from "@/components/modal/modal.component";
+import useCreateModalProps from "@/hooks/useCreateModalProps";
+import ChangeSubmissionStatus, {
+  statusOptions,
+} from "@/components/admin/submission-actions/change-status.component";
+import SetSubmissionPriority, {
+  priorityOptions,
+} from "@/components/admin/submission-actions/set-submission-priority.component";
 
 interface PageProps {
   params: { id: string };
@@ -47,6 +52,9 @@ export default function SubmissionDetailPage({ params }: PageProps) {
     useGetSubmissionDetailsByTrackingNumber(params.id);
 
   const submission = mockSubmissions.find((s) => s.id === "1");
+
+  const changeStatusModalProps = useCreateModalProps();
+  const setPriorityModalProps = useCreateModalProps();
 
   const [activeTab, setActiveTab] = useState<
     "details" | "notes" | "responses" | "history"
@@ -166,7 +174,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
       <div className="p-6">
         <Link
-          href="/admin/submissions"
+          href={adminRoutes.submissions()}
           className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-800 mb-6"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Submissions
@@ -179,13 +187,13 @@ export default function SubmissionDetailPage({ params }: PageProps) {
             <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4">
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={() => setShowStatusModal(true)}
+                  onClick={changeStatusModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors text-sm font-medium"
                 >
                   <Edit2 className="w-4 h-4" /> Change Status
                 </button>
                 <button
-                  onClick={() => setShowPriorityModal(true)}
+                  onClick={setPriorityModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
                 >
                   <Flag className="w-4 h-4" /> Set Priority
@@ -267,12 +275,12 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
                     <div>
                       <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">
-                        Attachments ({submission.attachments.length})
+                        Attachments ({submission_.files?.length})
                       </h3>
                       <div className="grid gap-3">
-                        {submission.attachments.map((attachment) => (
+                        {submission_.files?.map((file) => (
                           <div
-                            key={attachment.id}
+                            key={file.id}
                             className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-200"
                           >
                             <div className="flex items-center gap-3">
@@ -281,10 +289,10 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                               </div>
                               <div>
                                 <p className="text-sm font-medium text-stone-800">
-                                  {attachment.name}
+                                  {file.originalName}
                                 </p>
                                 <p className="text-xs text-stone-500">
-                                  {attachment.size}
+                                  {formatFileSize(Number(file.size))}
                                 </p>
                               </div>
                             </div>
@@ -449,26 +457,18 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 Status & Priority
               </h3>
               <div className="space-y-4">
-                <div>
+                <div className="capitalize">
                   <p className="text-xs text-stone-500 mb-1">Current Status</p>
-                  <span
-                    className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium border ${getStatusColor(submission.status)}`}
-                  >
-                    {
-                      statusOptions.find((s) => s.value === submission.status)
-                        ?.label
-                    }
-                  </span>
+
+                  <StatusBadge status={submission_.status} />
                 </div>
-                <div>
+
+                <div className="capitalize">
                   <p className="text-xs text-stone-500 mb-1">Priority</p>
-                  <span
-                    className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium border ${getPriorityColor(submission.priority)}`}
-                  >
-                    {submission.priority.charAt(0).toUpperCase() +
-                      submission.priority.slice(1)}
-                  </span>
+
+                  <StatusBadge status={submission_.priority} />
                 </div>
+
                 {submission.assignedDepartment && (
                   <div>
                     <p className="text-xs text-stone-500 mb-1">Assigned To</p>
@@ -521,75 +521,35 @@ export default function SubmissionDetailPage({ params }: PageProps) {
       </div>
 
       {/* Modals */}
-      {showStatusModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">
-              Change Status
-            </h3>
-            <select
-              className="w-full border border-stone-300 rounded-lg p-2 mb-4"
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-            >
-              {statusOptions.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300"
-                onClick={() => setShowStatusModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={handleStatusChange}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        title="Change Status"
+        description="Change submission status"
+        {...changeStatusModalProps}
+      >
+        <ChangeSubmissionStatus
+          status={submission_.status}
+          closeModal={changeStatusModalProps.close}
+          identifier={{
+            id: submission_.id,
+            trackingNumber: submission_.trackingNumber,
+          }}
+        />
+      </Modal>
 
-      {showPriorityModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">
-              Set Priority
-            </h3>
-            <select
-              className="w-full border border-stone-300 rounded-lg p-2 mb-4"
-              value={newPriority}
-              onChange={(e) => setNewPriority(e.target.value)}
-            >
-              {priorityOptions.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300"
-                onClick={() => setShowPriorityModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={handlePriorityChange}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        title="Set Priority"
+        description="Change submission priority"
+        {...setPriorityModalProps}
+      >
+        <SetSubmissionPriority
+          priority={submission_.priority}
+          closeModal={setPriorityModalProps.close}
+          identifier={{
+            id: submission_.id,
+            trackingNumber: submission_.trackingNumber,
+          }}
+        />
+      </Modal>
 
       {/* Forward Modal */}
       {showForwardModal && (

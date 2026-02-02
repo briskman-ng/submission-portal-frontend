@@ -1,3 +1,5 @@
+import { Status } from "@/components/status-badge/status.config";
+
 export interface Submission {
   id: string;
   trackingNumber: string;
@@ -8,8 +10,8 @@ export interface Submission {
     name: string;
     email: string;
   };
-  status: string;
-  priority: string;
+  status: Status;
+  priority: Status;
   priorityUpdatedAt: null;
   priorityUpdatedBy: null;
   submittedAt: string;
@@ -25,7 +27,14 @@ export interface Submission {
     createdAt: string;
     updatedAt: string;
   };
-  files: never[];
+  files: {
+    id: string;
+    originalName: string;
+    mimeType: string;
+    size: string;
+    uploadedAt: string;
+    submissionId: string;
+  }[];
   auditEntries: never[];
   internalNotes: never[];
   responses: never[];
