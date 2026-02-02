@@ -21,6 +21,8 @@ import useGetTodayDashboardStatistics from "@/react-query/admin/queries/useGetTo
 import { formatNumber } from "@/utils/formatters";
 import { statusOptions } from "@/components/admin/submission-actions/change-status.component";
 import { priorityOptions } from "@/components/admin/submission-actions/set-submission-priority.component";
+import adminRoutes from "@/helpers/admin/routes";
+import useGetAllSubmissions from "@/react-query/admin/queries/useGetAllSubmissions";
 
 const typeLabels: Record<string, string> = {
   proposal: "Project Proposal",
@@ -35,6 +37,7 @@ export default function AdminDashboardPage() {
   >("today");
 
   const { data: todayDashboardStatistics } = useGetTodayDashboardStatistics();
+  const { data: submissionsData } = useGetAllSubmissions();
 
   const stats = useMemo(() => {
     return [
@@ -75,7 +78,7 @@ export default function AdminDashboardPage() {
     ];
   }, [todayDashboardStatistics]);
 
-  const recentSubmissions = mockSubmissions.slice(0, 5);
+  const recentSubmissions = submissionsData?.submissions?.slice(0, 5);
 
   const getStatusColor = (status: string) => {
     return (
@@ -181,7 +184,7 @@ export default function AdminDashboardPage() {
                 Recent Submissions
               </h2>
               <Link
-                href="/admin/submissions"
+                href={adminRoutes.submissions()}
                 className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
               >
                 View All
@@ -189,16 +192,16 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
             <div className="divide-y divide-stone-100">
-              {recentSubmissions.map((submission) => (
+              {recentSubmissions?.map((submission) => (
                 <Link
                   key={submission.id}
-                  href={`/admin/submissions/${submission.id}`}
+                  href={adminRoutes.viewSubmission(submission.trackingNumber)}
                   className="flex items-center gap-4 px-6 py-4 hover:bg-stone-50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-mono text-sm font-medium text-emerald-700">
-                        {submission.trackingId}
+                        {submission.trackingNumber}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(submission.priority)}`}
@@ -207,10 +210,10 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <p className="text-sm text-stone-800 font-medium truncate">
-                      {submission.subject}
+                      {submission.title}
                     </p>
                     <p className="text-xs text-stone-500 mt-1">
-                      {submission.submitterName} • {typeLabels[submission.type]}
+                      {submission.user?.name} • {typeLabels[submission.type]}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
