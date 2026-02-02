@@ -23,6 +23,11 @@ import { statusOptions } from "@/components/admin/submission-actions/change-stat
 import { priorityOptions } from "@/components/admin/submission-actions/set-submission-priority.component";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetAllSubmissions from "@/react-query/admin/queries/useGetAllSubmissions";
+import useGetThisWeekDashboardStatistics from "@/react-query/admin/queries/useGetThisWeekDashboardStatistics";
+import { TodayDashboardStatistics } from "@/types/admin/today-dashboard-statistics.type";
+import useGetSubmissionStatusStats from "@/react-query/admin/queries/useGetSubmissionStatusStats";
+import { SubmissionStatusStats } from "@/types/admin/submission-status-stats.type";
+import useGetDashboardStatistics from "@/react-query/admin/queries/useGetDashboardStatistics";
 
 const typeLabels: Record<string, string> = {
   proposal: "Project Proposal",
@@ -36,14 +41,23 @@ export default function AdminDashboardPage() {
     "today" | "week" | "month" | "custom"
   >("today");
 
+  const { data: dashboardStatistics } = useGetDashboardStatistics();
   const { data: todayDashboardStatistics } = useGetTodayDashboardStatistics();
+  const { data: weekDashboardStatistics } = useGetThisWeekDashboardStatistics();
+  const { data: submissionStatusStats } = useGetSubmissionStatusStats();
   const { data: submissionsData } = useGetAllSubmissions();
 
   const stats = useMemo(() => {
+    const origin =
+      dateFilter === "today"
+        ? todayDashboardStatistics
+        : dateFilter === "week"
+          ? weekDashboardStatistics
+          : ({} as TodayDashboardStatistics);
     return [
       {
         label: "Total Submissions",
-        value: formatNumber(todayDashboardStatistics?.totalSubmissions ?? 0),
+        value: formatNumber(origin?.totalSubmissions ?? 0),
         icon: FileText,
         color: "bg-blue-500",
         change: "+12%",
@@ -51,7 +65,7 @@ export default function AdminDashboardPage() {
       },
       {
         label: "New Today",
-        value: formatNumber(todayDashboardStatistics?.newSubmissions ?? 0),
+        value: formatNumber(origin?.newSubmissions ?? 0),
         icon: Clock,
         color: "bg-amber-500",
         change: "+3",
@@ -59,7 +73,7 @@ export default function AdminDashboardPage() {
       },
       {
         label: "Pending Review",
-        value: formatNumber(todayDashboardStatistics?.pendingSubmissions ?? 0),
+        value: formatNumber(origin?.pendingSubmissions ?? 0),
         icon: AlertTriangle,
         color: "bg-orange-500",
         change: "-5",
@@ -67,16 +81,14 @@ export default function AdminDashboardPage() {
       },
       {
         label: "Completed Today",
-        value: formatNumber(
-          todayDashboardStatistics?.completedSubmissions ?? 0,
-        ),
+        value: formatNumber(origin?.completedSubmissions ?? 0),
         icon: CheckCircle2,
         color: "bg-emerald-500",
         change: "+2",
         changeType: "up",
       },
     ];
-  }, [todayDashboardStatistics]);
+  }, [todayDashboardStatistics, dateFilter, weekDashboardStatistics]);
 
   const recentSubmissions = submissionsData?.submissions?.slice(0, 5);
 
@@ -108,8 +120,8 @@ export default function AdminDashboardPage() {
             {[
               { id: "today", label: "Today" },
               { id: "week", label: "This Week" },
-              { id: "month", label: "This Month" },
-              { id: "custom", label: "Custom" },
+              // { id: "month", label: "This Month" },
+              // { id: "custom", label: "Custom" },
             ].map((filter) => (
               <button
                 key={filter.id}
@@ -152,7 +164,7 @@ export default function AdminDashboardPage() {
                 >
                   <stat.icon className="w-6 h-6 text-white" />
                 </div>
-                <div
+                {/* <div
                   className={`flex items-center gap-1 text-sm ${
                     stat.changeType === "up"
                       ? "text-emerald-600"
@@ -165,7 +177,7 @@ export default function AdminDashboardPage() {
                     <ArrowDownRight className="w-4 h-4" />
                   )}
                   {stat.change}
-                </div>
+                </div> */}
               </div>
               <p className="font-display text-3xl font-bold text-stone-900 mt-4">
                 {stat.value}
@@ -213,7 +225,8 @@ export default function AdminDashboardPage() {
                       {submission.title}
                     </p>
                     <p className="text-xs text-stone-500 mt-1">
-                      {submission.user?.name} • {typeLabels[submission.type]}
+                      {submission.user?.name} •{" "}
+                      {typeLabels[submission.type.toLowerCase()]}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -243,10 +256,13 @@ export default function AdminDashboardPage() {
             </div>
             <div className="p-6 space-y-4">
               {statusOptions.slice(0, 6).map((status) => {
-                const count = mockSubmissions.filter(
-                  (s) => s.status === status.value,
-                ).length;
-                const percentage = (count / mockSubmissions.length) * 100;
+                const count =
+                  submissionStatusStats?.[
+                    status.value as keyof SubmissionStatusStats
+                  ] ?? 0;
+
+                const percentage =
+                  (count / (submissionsData?.total ?? 0)) * 100;
                 return (
                   <div key={status.value}>
                     <div className="flex items-center justify-between mb-1">
@@ -275,25 +291,33 @@ export default function AdminDashboardPage() {
           {[
             {
               label: "New Submissions",
-              count: 12,
+              count: formatNumber(
+                dashboardStatistics?.stats.newSubmissions ?? 0,
+              ),
               href: "/admin/submissions?status=new",
               color: "border-blue-500",
             },
             {
               label: "Urgent Priority",
-              count: 3,
+              count: formatNumber(
+                dashboardStatistics?.stats.urgentSubmissions ?? 0,
+              ),
               href: "/admin/submissions?priority=urgent",
               color: "border-red-500",
             },
             {
               label: "Awaiting Response",
-              count: 8,
+              count: formatNumber(
+                dashboardStatistics?.stats.pendingSubmissions ?? 0,
+              ),
               href: "/admin/submissions?status=in-review",
               color: "border-amber-500",
             },
             {
               label: "This Week",
-              count: 47,
+              count: formatNumber(
+                dashboardStatistics?.stats.thisWeekSubmissions ?? 0,
+              ),
               href: "/admin/submissions?range=week",
               color: "border-emerald-500",
             },

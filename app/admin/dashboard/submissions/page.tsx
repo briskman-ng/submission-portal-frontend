@@ -455,7 +455,9 @@ export default function SubmissionsPage() {
                   >
                     <td className="px-6 py-4">
                       <Link
-                        href={`/admin/submissions/${submission.id}`}
+                        href={adminRoutes.viewSubmission(
+                          submission.trackingNumber,
+                        )}
                         className="font-mono text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:underline"
                       >
                         {submission.trackingNumber}
