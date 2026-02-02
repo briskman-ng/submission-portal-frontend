@@ -14,7 +14,6 @@ import {
   Download,
   RefreshCw,
 } from "lucide-react";
-import { mockSubmissions } from "@/lib/admin-mock-data";
 import { typeOptions } from "@/lib/admin-types";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetAllSubmissions from "@/react-query/admin/queries/useGetAllSubmissions";
@@ -43,9 +42,10 @@ export default function SubmissionsPage() {
   const router = useRouter();
 
   const page = Number(searchParams.get("page") ?? 1);
+  const status = searchParams.get("status") ?? "";
 
   const { data: submissionsData, isLoading: isLoadingSubmissions } =
-    useGetAllSubmissions({ page });
+    useGetAllSubmissions({ page, status });
 
   const filteredSubmissions = useMemo(() => {
     let result = [...(submissionsData?.submissions ?? [])];
