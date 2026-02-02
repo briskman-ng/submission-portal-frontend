@@ -9,7 +9,9 @@ export type Status =
   | "suspended"
   | "successful"
   | "approved"
-  | "completed";
+  | "completed"
+  | "new"
+  | "low";
 
 export type StatusIntent =
   | "success"
@@ -26,8 +28,11 @@ export const STATUS_INTENT_MAP: Record<Status, StatusIntent> = {
   approved: "success",
   completed: "success",
 
+  new: "loading",
+
   offline: "error",
   failed: "error",
+  low: "error",
 
   pending: "warning",
   suspended: "warning",

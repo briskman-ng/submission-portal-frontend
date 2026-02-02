@@ -20,6 +20,7 @@ import Modal from "./modal/modal.component";
 import SignInComponent from "./auth/sign-in/sign-in.component";
 import useCreateModalProps from "@/hooks/useCreateModalProps";
 import useCreateSubmissionForGuest from "@/react-query/mutations/useCreateSubmissionForGuest";
+import { formatFileSize } from "@/utils/formatters";
 
 type FormData = z.infer<typeof submissionSchema> & {
   name: string;
@@ -143,14 +144,6 @@ const SubmissionForm: React.FC = () => {
       ...prev,
       attachments: prev.attachments.filter((a, idx) => idx !== index),
     }));
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const handleDrag = (e: React.DragEvent) => {

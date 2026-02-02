@@ -16,9 +16,11 @@ import {
   Eye,
 } from "lucide-react";
 import { mockSubmissions, mockDashboardStats } from "@/lib/admin-mock-data";
-import { statusOptions, priorityOptions, typeOptions } from "@/lib/admin-types";
+import { typeOptions } from "@/lib/admin-types";
 import useGetTodayDashboardStatistics from "@/react-query/admin/queries/useGetTodayDashboardStatistics";
 import { formatNumber } from "@/utils/formatters";
+import { statusOptions } from "@/components/admin/submission-actions/change-status.component";
+import { priorityOptions } from "@/components/admin/submission-actions/set-submission-priority.component";
 
 const typeLabels: Record<string, string> = {
   proposal: "Project Proposal",

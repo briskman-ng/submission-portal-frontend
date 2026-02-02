@@ -27,14 +27,21 @@ import {
   Eye,
 } from "lucide-react";
 import { mockSubmissions } from "@/lib/admin-mock-data";
-import {
-  statusOptions,
-  priorityOptions,
-  typeOptions,
-  departments,
-} from "@/lib/admin-types";
+import { typeOptions, departments } from "@/lib/admin-types";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetSubmissionDetailsByTrackingNumber from "@/react-query/admin/queries/useGetSubmissionDetailsByTrackingNumber";
+import { formatFileSize } from "@/utils/formatters";
+import StatusBadge from "@/components/status-badge/status-badge.component";
+import Modal from "@/components/modal/modal.component";
+import useCreateModalProps from "@/hooks/useCreateModalProps";
+import ChangeSubmissionStatus, {
+  statusOptions,
+} from "@/components/admin/submission-actions/change-status.component";
+import SetSubmissionPriority, {
+  priorityOptions,
+} from "@/components/admin/submission-actions/set-submission-priority.component";
+import { Button } from "@/components/ui/button";
+import AddNoteToSubmission from "@/components/admin/submission-actions/add-note-to-submission.component";
 
 interface PageProps {
   params: { id: string };
@@ -47,6 +54,10 @@ export default function SubmissionDetailPage({ params }: PageProps) {
     useGetSubmissionDetailsByTrackingNumber(params.id);
 
   const submission = mockSubmissions.find((s) => s.id === "1");
+
+  const changeStatusModalProps = useCreateModalProps();
+  const setPriorityModalProps = useCreateModalProps();
+  const addNoteModalProps = useCreateModalProps();
 
   const [activeTab, setActiveTab] = useState<
     "details" | "notes" | "responses" | "history"
@@ -145,12 +156,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
       includeAttachments: true,
     });
   };
-  const handleAddNote = () => {
-    console.log("Adding note:", noteContent, "Private:", notePrivate);
-    setShowNoteModal(false);
-    setNoteContent("");
-    setNotePrivate(false);
-  };
+
   const handleSendResponse = () => {
     console.log("Sending response:", responseData);
     setShowResponseModal(false);
@@ -166,7 +172,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
       <div className="p-6">
         <Link
-          href="/admin/submissions"
+          href={adminRoutes.submissions()}
           className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-800 mb-6"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Submissions
@@ -178,36 +184,47 @@ export default function SubmissionDetailPage({ params }: PageProps) {
             {/* Quick Actions */}
             <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4">
               <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => setShowStatusModal(true)}
+                <Button
+                  variant={"ghost"}
+                  onClick={changeStatusModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors text-sm font-medium"
                 >
                   <Edit2 className="w-4 h-4" /> Change Status
-                </button>
-                <button
-                  onClick={() => setShowPriorityModal(true)}
+                </Button>
+
+                <Button
+                  variant={"ghost"}
+                  onClick={setPriorityModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
                 >
                   <Flag className="w-4 h-4" /> Set Priority
-                </button>
-                <button
+                </Button>
+
+                <Button
+                  variant={"ghost"}
+                  disabled
                   onClick={() => setShowForwardModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                 >
                   <Forward className="w-4 h-4" /> Forward to Department
-                </button>
-                <button
-                  onClick={() => setShowNoteModal(true)}
+                </Button>
+
+                <Button
+                  variant={"ghost"}
+                  onClick={addNoteModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium"
                 >
                   <MessageSquare className="w-4 h-4" /> Add Note
-                </button>
-                <button
+                </Button>
+
+                <Button
+                  variant={"ghost"}
+                  disabled
                   onClick={() => setShowResponseModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-cyan-50 text-cyan-700 rounded-lg hover:bg-cyan-100 transition-colors text-sm font-medium"
                 >
                   <Send className="w-4 h-4" /> Send Response
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -220,7 +237,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                     id: "notes",
                     label: "Internal Notes",
                     icon: MessageSquare,
-                    count: submission.internalNotes.length,
+                    count: submission_.internalNotes.length,
                   },
                   {
                     id: "responses",
@@ -232,7 +249,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                     id: "history",
                     label: "Activity Log",
                     icon: History,
-                    count: submission.activityLog.length,
+                    count: submission_.auditEntries.length,
                   },
                 ].map((tab) => (
                   <button
@@ -241,7 +258,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${activeTab === tab.id ? "text-emerald-700 border-b-2 border-emerald-700 bg-emerald-50/50" : "text-stone-500 hover:text-stone-700 hover:bg-stone-50"}`}
                   >
                     <tab.icon className="w-4 h-4" /> {tab.label}
-                    {tab.count !== undefined && tab.count > 0 && (
+                    {tab.count !== undefined && (
                       <span className="ml-1 px-2 py-0.5 bg-stone-200 text-stone-600 text-xs rounded-full">
                         {tab.count}
                       </span>
@@ -267,12 +284,12 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
                     <div>
                       <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">
-                        Attachments ({submission.attachments.length})
+                        Attachments ({submission_.files?.length})
                       </h3>
                       <div className="grid gap-3">
-                        {submission.attachments.map((attachment) => (
+                        {submission_.files?.map((file) => (
                           <div
-                            key={attachment.id}
+                            key={file.id}
                             className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-200"
                           >
                             <div className="flex items-center gap-3">
@@ -281,10 +298,10 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                               </div>
                               <div>
                                 <p className="text-sm font-medium text-stone-800">
-                                  {attachment.name}
+                                  {file.originalName}
                                 </p>
                                 <p className="text-xs text-stone-500">
-                                  {attachment.size}
+                                  {formatFileSize(Number(file.size))}
                                 </p>
                               </div>
                             </div>
@@ -306,19 +323,19 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 {/* Notes Tab */}
                 {activeTab === "notes" && (
                   <div className="space-y-4">
-                    {submission.internalNotes.length === 0 ? (
+                    {submission_.internalNotes.length === 0 ? (
                       <div className="text-center py-8">
                         <MessageSquare className="w-10 h-10 text-stone-300 mx-auto mb-3" />
                         <p className="text-stone-500">No internal notes yet</p>
                         <button
-                          onClick={() => setShowNoteModal(true)}
+                          onClick={addNoteModalProps.open}
                           className="mt-3 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
                         >
                           Add the first note
                         </button>
                       </div>
                     ) : (
-                      submission.internalNotes.map((note) => (
+                      submission_.internalNotes.map((note) => (
                         <div
                           key={note.id}
                           className="p-4 bg-stone-50 rounded-lg border border-stone-200"
@@ -327,7 +344,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                                 <span className="text-xs font-semibold text-emerald-700">
-                                  {note.authorName
+                                  {note.adminUser.name
                                     .split(" ")
                                     .map((n) => n[0])
                                     .join("")}
@@ -335,18 +352,18 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                               </div>
                               <div>
                                 <p className="text-sm font-medium text-stone-800">
-                                  {note.authorName}
+                                  {note.adminUser.name}
                                 </p>
                                 <p className="text-xs text-stone-500">
                                   {new Date(note.createdAt).toLocaleString()}
                                 </p>
                               </div>
                             </div>
-                            {note.isPrivate && (
+                            {/* {note.isPrivate && (
                               <span className="text-xs bg-stone-200 text-stone-600 px-2 py-0.5 rounded">
                                 Private
                               </span>
-                            )}
+                            )} */}
                           </div>
                           <p className="text-stone-700 text-sm">
                             {note.content}
@@ -409,32 +426,34 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 {/* History Tab */}
                 {activeTab === "history" && (
                   <div className="space-y-0">
-                    {submission.activityLog.map((log, index) => (
-                      <div key={log.id} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`w-3 h-3 rounded-full ${log.action === "created" ? "bg-blue-500" : log.action === "status_changed" ? "bg-emerald-500" : log.action === "forwarded" ? "bg-cyan-500" : log.action === "priority_changed" ? "bg-orange-500" : log.action === "response_sent" ? "bg-purple-500" : "bg-stone-400"}`}
-                          />
-                          {index < submission.activityLog.length - 1 && (
-                            <div className="w-0.5 h-full bg-stone-200 my-1" />
-                          )}
-                        </div>
-                        <div className="pb-6 flex-1">
-                          <p className="text-sm text-stone-800">
-                            {log.description}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-stone-500">
-                              {log.userName}
-                            </span>
-                            <span className="text-stone-300">•</span>
-                            <span className="text-xs text-stone-400">
-                              {new Date(log.timestamp).toLocaleString()}
-                            </span>
+                    {submission_?.auditEntries.length
+                      ? submission_.auditEntries.map((log, index) => (
+                          <div key={log.id} className="flex gap-4">
+                            <div className="flex flex-col items-center">
+                              <div
+                                className={`min-w-3 min-h-3 rounded-full ${log.action === "created" ? "bg-blue-500" : log.action === "status_changed" ? "bg-emerald-500" : log.action === "forwarded" ? "bg-cyan-500" : log.action === "priority_changed" ? "bg-orange-500" : log.action === "response_sent" ? "bg-purple-500" : "bg-stone-400"}`}
+                              />
+                              {index < submission.activityLog.length - 1 && (
+                                <div className="w-0.5 h-full bg-stone-200 my-1" />
+                              )}
+                            </div>
+                            <div className="pb-6 flex-1">
+                              <p className="text-sm text-stone-800">
+                                {log.action.replaceAll("_", " ")}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-stone-500">
+                                  {log.adminUser.name}
+                                </span>
+                                <span className="text-stone-300">•</span>
+                                <span className="text-xs text-stone-400">
+                                  {new Date(log.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        ))
+                      : "N/A"}
                   </div>
                 )}
               </div>
@@ -449,26 +468,18 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 Status & Priority
               </h3>
               <div className="space-y-4">
-                <div>
+                <div className="capitalize">
                   <p className="text-xs text-stone-500 mb-1">Current Status</p>
-                  <span
-                    className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium border ${getStatusColor(submission.status)}`}
-                  >
-                    {
-                      statusOptions.find((s) => s.value === submission.status)
-                        ?.label
-                    }
-                  </span>
+
+                  <StatusBadge status={submission_.status} />
                 </div>
-                <div>
+
+                <div className="capitalize">
                   <p className="text-xs text-stone-500 mb-1">Priority</p>
-                  <span
-                    className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium border ${getPriorityColor(submission.priority)}`}
-                  >
-                    {submission.priority.charAt(0).toUpperCase() +
-                      submission.priority.slice(1)}
-                  </span>
+
+                  <StatusBadge status={submission_.priority} />
                 </div>
+
                 {submission.assignedDepartment && (
                   <div>
                     <p className="text-xs text-stone-500 mb-1">Assigned To</p>
@@ -521,75 +532,45 @@ export default function SubmissionDetailPage({ params }: PageProps) {
       </div>
 
       {/* Modals */}
-      {showStatusModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">
-              Change Status
-            </h3>
-            <select
-              className="w-full border border-stone-300 rounded-lg p-2 mb-4"
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-            >
-              {statusOptions.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300"
-                onClick={() => setShowStatusModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={handleStatusChange}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        title="Change Status"
+        description="Change submission status"
+        {...changeStatusModalProps}
+      >
+        <ChangeSubmissionStatus
+          status={submission_.status}
+          closeModal={changeStatusModalProps.close}
+          identifier={{
+            id: submission_.id,
+            trackingNumber: submission_.trackingNumber,
+          }}
+        />
+      </Modal>
 
-      {showPriorityModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">
-              Set Priority
-            </h3>
-            <select
-              className="w-full border border-stone-300 rounded-lg p-2 mb-4"
-              value={newPriority}
-              onChange={(e) => setNewPriority(e.target.value)}
-            >
-              {priorityOptions.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300"
-                onClick={() => setShowPriorityModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={handlePriorityChange}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        title="Set Priority"
+        description="Change submission priority"
+        {...setPriorityModalProps}
+      >
+        <SetSubmissionPriority
+          priority={submission_.priority}
+          closeModal={setPriorityModalProps.close}
+          identifier={{
+            id: submission_.id,
+            trackingNumber: submission_.trackingNumber,
+          }}
+        />
+      </Modal>
+
+      <Modal title="Add Note" description="" {...addNoteModalProps}>
+        <AddNoteToSubmission
+          closeModal={addNoteModalProps.close}
+          identifier={{
+            id: submission_.id,
+            trackingNumber: submission_.trackingNumber,
+          }}
+        />
+      </Modal>
 
       {/* Forward Modal */}
       {showForwardModal && (
@@ -665,45 +646,6 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 onClick={handleForward}
               >
                 Forward
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Note Modal */}
-      {showNoteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">
-              Add Note
-            </h3>
-            <textarea
-              className="w-full border border-stone-300 rounded-lg p-2 mb-2"
-              placeholder="Write note..."
-              value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
-            />
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="checkbox"
-                checked={notePrivate}
-                onChange={(e) => setNotePrivate(e.target.checked)}
-              />
-              <label className="text-sm text-stone-700">Private Note</label>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300"
-                onClick={() => setShowNoteModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={handleAddNote}
-              >
-                Add Note
               </button>
             </div>
           </div>
