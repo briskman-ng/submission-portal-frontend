@@ -8,7 +8,10 @@ interface IUpdateSubmissionPriority {
   reason?: string;
 }
 
-const updateSubmissionPriority = put(adminSubmissionsApi, "/:id/priority");
+const updateSubmissionPriority = put<IUpdateSubmissionPriority>(
+  adminSubmissionsApi,
+  "/:id/priority",
+);
 
 const useUpdateSubmissionPriority = (
   submissionId: { id: string; trackingNumber: string },

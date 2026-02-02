@@ -35,7 +35,32 @@ export interface Submission {
     uploadedAt: string;
     submissionId: string;
   }[];
-  auditEntries: never[];
-  internalNotes: never[];
+  auditEntries: {
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    previousValue: string;
+    newValue: string;
+    timestamp: string;
+    adminUserId: string;
+    submissionId: string;
+    responseId: null;
+    adminUser: {
+      name: string;
+      email: string;
+    };
+  }[];
+  internalNotes: {
+    id: string;
+    content: string;
+    createdAt: string;
+    submissionId: string;
+    adminUserId: string;
+    adminUser: {
+      name: string;
+      email: string;
+    };
+  }[];
   responses: never[];
 }

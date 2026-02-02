@@ -1,27 +1,23 @@
-import { adminSubmissionsApi, put } from "@/react-query";
+import { adminSubmissionsApi, post } from "@/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import queryKeys from "../queryKeys";
 import { toast } from "react-toastify";
 
-interface IUpdateSubmissionStatus {
-  status: string;
-  reason?: string;
+interface IAddNoteToSubmission {
+  content: string;
 }
 
-const updateSubmissionStatus = put<IUpdateSubmissionStatus>(
-  adminSubmissionsApi,
-  "/:id/status",
-);
+const addNoteToSubmission = post(adminSubmissionsApi, "/:id/notes");
 
-const useUpdateSubmissionStatus = (
+const useAddNoteToSubmission = (
   submissionId: { id: string; trackingNumber: string },
   onSuccess?: () => void,
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: IUpdateSubmissionStatus) =>
-      updateSubmissionStatus({ body, paramsMap: { id: submissionId.id } }),
+    mutationFn: (body: IAddNoteToSubmission) =>
+      addNoteToSubmission({ body, params: { id: submissionId.id } }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [
@@ -30,11 +26,11 @@ const useUpdateSubmissionStatus = (
         ],
       });
 
-      toast.success("Status updated!");
+      toast.success("Note added!");
 
       onSuccess?.();
     },
   });
 };
 
-export default useUpdateSubmissionStatus;
+export default useAddNoteToSubmission;
