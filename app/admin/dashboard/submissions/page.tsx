@@ -475,9 +475,9 @@ export default function SubmissionsPage() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-nowrap">
                       <span className="text-sm text-stone-600">
-                        {getTypeLabel(submission.type)}
+                        {getTypeLabel(submission.type) ?? submission.type}
                       </span>
                     </td>
 
