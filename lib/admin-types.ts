@@ -186,20 +186,6 @@ export interface DashboardStats {
    DEPARTMENTS
 ======================= */
 
-export const departments: string[] = [
-  "Finance",
-  "Legal",
-  "Human Resources",
-  "IT & Digital Services",
-  "Operations",
-  "Procurement",
-  "Engineering",
-  "Community Development",
-  "Environmental Affairs",
-  "Public Relations",
-  "Research & Strategy",
-];
-
 export type RoleValue = "super_admin" | "admin" | "staff";
 
 export interface RoleOption {
