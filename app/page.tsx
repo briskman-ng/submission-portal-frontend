@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import SubmissionForm from "@/components/SubmissionForm";
 import Navigation from "@/components/Navigation";
-import Footer from '@/components/Footer';
+import Footer from "@/components/Footer";
 
 export default function LandingPage() {
   const trustIndicators = [
@@ -105,10 +105,12 @@ export default function LandingPage() {
               </div>
 
               <div className="flex items-center gap-5 pt-4 border-t border-stone-200">
-                {/* <div>
-                  <p className="font-display text-2xl font-semibold text-emerald-700">10K+</p>
-                  <p className="text-stone-500 text-xs">Submissions Processed</p>
-                </div> */}
+                <div>
+                  <p className="font-display text-2xl font-semibold text-emerald-700">
+                    0
+                  </p>
+                  <p className="text-stone-500 text-xs">Lost Submissions</p>
+                </div>
                 <div className="w-px h-10 bg-stone-200"></div>
                 <div>
                   <p className="font-display text-2xl font-semibold text-emerald-700">
@@ -117,10 +119,12 @@ export default function LandingPage() {
                   <p className="text-stone-500 text-xs">Avg. Response Time</p>
                 </div>
                 <div className="w-px h-10 bg-stone-200"></div>
-                {/* <div>
-                  <p className="font-display text-2xl font-semibold text-emerald-700">9</p>
-                  <p className="text-stone-500 text-xs">State Offices</p>
-                </div> */}
+                <div>
+                  <p className="font-display text-2xl font-semibold text-emerald-700">
+                    100%
+                  </p>
+                  <p className="text-stone-500 text-xs">Documented Response</p>
+                </div>
               </div>
             </div>
 
@@ -206,7 +210,6 @@ export default function LandingPage() {
       </section>
 
       <Footer />
-      
     </>
   );
 }
