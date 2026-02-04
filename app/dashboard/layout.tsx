@@ -21,6 +21,8 @@ export default function DashboardLayout({
 
   const { data: userData, isLoading } = useGetCurrentUser(!user);
 
+  const isAuthenticated = !!user || !!userData;
+
   const logout = useLogOut();
 
   useEffect(() => {
@@ -47,21 +49,23 @@ export default function DashboardLayout({
     }
   }, [user, logout]);
 
+  if (isLoading && !isAuthenticated) {
+    return <AuthLoader />;
+  }
+
+  if (!isLoading && !isAuthenticated) {
+    return null;
+  }
+
   return (
     <>
-      {isLoading && !user ? (
-        <AuthLoader />
-      ) : (
-        <>
-          <Navigation />
+      <Navigation />
 
-          <section className="pt-20 min-h-screen bg-stone-50">
-            <div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
-          </section>
+      <section className="pt-20 min-h-screen bg-stone-50">
+        <div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
+      </section>
 
-          <Footer />
-        </>
-      )}
+      <Footer />
     </>
   );
 }

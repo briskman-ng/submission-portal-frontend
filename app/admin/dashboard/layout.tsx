@@ -7,7 +7,7 @@ import useLogOut from "@/hooks/useLogOut";
 import useGetCurrentUser from "@/react-query/admin/queries/useGetCurrentUser";
 import useAdminUserStore from "@/store/admin/admin-user-store";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function AdminDashboardLayout({
@@ -21,9 +21,13 @@ export default function AdminDashboardLayout({
   const { user, updateUser } = useAdminUserStore((state) => state);
 
   const { data: userData, isLoading } = useGetCurrentUser(!user);
+  const isAuthenticated = !!user || !!userData;
 
   const logout = useLogOut();
 
+  /**
+   * Auth resolution + redirect
+   */
   useEffect(() => {
     if (isLoading) return;
 
@@ -39,40 +43,43 @@ export default function AdminDashboardLayout({
     }
   }, [isLoading, user, userData, updateUser, router]);
 
-  if (!user?.adminUser) {
-    toast.error("Access denied");
-    logout();
+  /**
+   * Authorization check
+   */
+  useEffect(() => {
+    if (!user) return;
 
-    return <></>;
+    if (!user.adminUser) {
+      toast.error("Access denied");
+      logout();
+    }
+  }, [user, logout]);
+
+  /**
+   * Render gating (prevents flash)
+   */
+  if (isLoading && !isAuthenticated) {
+    return <AuthLoader />;
+  }
+
+  if (!isLoading && !isAuthenticated) {
+    return null;
   }
 
   return (
-    <>
-      {isLoading && !user ? (
-        <AuthLoader />
-      ) : (
-        <>
-          <div className="min-h-screen bg-stone-100">
-            <AdminSidebar
-              collapsed={sidebarCollapsed}
-              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-            />
+    <div className="min-h-screen bg-stone-100">
+      <AdminSidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
 
-            <div
-              className={`transition-all duration-300 ${sidebarCollapsed ? "ml-20" : "ml-64"}`}
-            >
-              <div className="min-h-screen">
-                {/* <AdminHeader
-              title="Dashboard"
-              subtitle="Overview of submissions and activity"
-            /> */}
-
-                {children}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </>
+      <div
+        className={`transition-all duration-300 ${
+          sidebarCollapsed ? "ml-20" : "ml-64"
+        }`}
+      >
+        <div className="min-h-screen">{children}</div>
+      </div>
+    </div>
   );
 }
