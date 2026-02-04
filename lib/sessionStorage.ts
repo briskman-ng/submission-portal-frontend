@@ -1,17 +1,23 @@
-type keys = "authToken";
+type Keys = "authToken";
 
-export const setItem = (key: keys, data: string) => {
-  return sessionStorage.setItem(key, data);
+const isBrowser = typeof window !== "undefined";
+
+export const setItem = (key: Keys, data: string) => {
+  if (!isBrowser) return;
+  sessionStorage.setItem(key, data);
 };
 
-export const getItem = (key: keys) => {
+export const getItem = (key: Keys) => {
+  if (!isBrowser) return null;
   return sessionStorage.getItem(key);
 };
 
-export const removeItem = (key: keys) => {
-  return sessionStorage.removeItem(key);
+export const removeItem = (key: Keys) => {
+  if (!isBrowser) return;
+  sessionStorage.removeItem(key);
 };
 
 export const clearItems = () => {
-  return sessionStorage.clear();
+  if (!isBrowser) return;
+  sessionStorage.clear();
 };

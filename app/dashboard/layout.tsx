@@ -23,41 +23,45 @@ export default function DashboardLayout({
 
   const logout = useLogOut();
 
-  const handleRedirect = () => {
-    return router.push(routes.home() + "?action=login");
-  };
+  useEffect(() => {
+    if (isLoading) return;
+
+    // Not logged in
+    if (!user && !userData) {
+      router.push(routes.home() + "?action=login");
+      return;
+    }
+
+    // Sync store
+    if (!user && userData) {
+      updateUser(userData.user);
+    }
+  }, [isLoading, user, userData, updateUser, router]);
 
   useEffect(() => {
-    if (userData && !user) updateUser(userData?.user);
-  }, [userData, user, updateUser]);
+    if (!user) return;
 
-  if (isLoading && !user) {
-    return <AuthLoader />;
-  }
-
-  if (!isLoading && !user && !userData) {
-    handleRedirect();
-
-    return <></>;
-  }
-
-  console.log(user)
-
-  if (user && user?.userType !== "individual") {
-    toast.error("This is an application for individuals");
-    logout();
-    return <></>;
-  }
+    if (user.userType !== "individual") {
+      toast.error("This is an application for individuals");
+      logout();
+    }
+  }, [user, logout]);
 
   return (
     <>
-      <Navigation />
+      {isLoading && !user ? (
+        <AuthLoader />
+      ) : (
+        <>
+          <Navigation />
 
-      <section className="pt-20 min-h-screen bg-stone-50">
-        <div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
-      </section>
+          <section className="pt-20 min-h-screen bg-stone-50">
+            <div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
+          </section>
 
-      <Footer />
+          <Footer />
+        </>
+      )}
     </>
   );
 }

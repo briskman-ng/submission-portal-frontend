@@ -24,51 +24,55 @@ export default function AdminDashboardLayout({
 
   const logout = useLogOut();
 
-  const handleRedirect = () => {
-    return router.push(adminRoutes.signIn());
-  };
-
   useEffect(() => {
-    if (userData && !user) updateUser(userData);
-  }, [userData, user, updateUser]);
+    if (isLoading) return;
 
-  if (isLoading && !user) {
-    return <AuthLoader />;
-  }
+    // Not logged in
+    if (!user && !userData) {
+      router.push(adminRoutes.signIn());
+      return;
+    }
 
-  if (!isLoading && !user && !userData) {
-    handleRedirect();
+    // Sync store
+    if (!user && userData) {
+      updateUser(userData);
+    }
+  }, [isLoading, user, userData, updateUser, router]);
 
-    return <></>;
-  }
-
-  if (user && !user?.adminUser) {
+  if (!user?.adminUser) {
     toast.error("Access denied");
     logout();
+
     return <></>;
   }
 
   return (
     <>
-      <div className="min-h-screen bg-stone-100">
-        <AdminSidebar
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
+      {isLoading && !user ? (
+        <AuthLoader />
+      ) : (
+        <>
+          <div className="min-h-screen bg-stone-100">
+            <AdminSidebar
+              collapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            />
 
-        <div
-          className={`transition-all duration-300 ${sidebarCollapsed ? "ml-20" : "ml-64"}`}
-        >
-          <div className="min-h-screen">
-            {/* <AdminHeader
+            <div
+              className={`transition-all duration-300 ${sidebarCollapsed ? "ml-20" : "ml-64"}`}
+            >
+              <div className="min-h-screen">
+                {/* <AdminHeader
               title="Dashboard"
               subtitle="Overview of submissions and activity"
             /> */}
 
-            {children}
+                {children}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </>
   );
 }

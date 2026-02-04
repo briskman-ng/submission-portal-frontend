@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import ReduxProvider from "@/app/providers/ReduxProviders";
 import Providers from "./providers";
 import { ToastContainer } from "react-toastify";
 
@@ -26,10 +25,8 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-stone-50 font-sans antialiased">
         <Providers>
-          <ReduxProvider>
-            <ToastContainer />
-            <main>{children}</main>
-          </ReduxProvider>
+          <ToastContainer />
+          <main>{children}</main>
         </Providers>
       </body>
     </html>
