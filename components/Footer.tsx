@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { MapPin, Phone, Mail } from "lucide-react";
 import NDDCLogo from "./NDDCLogo";
+import routes from "@/helpers/routes";
 
 const Footer: React.FC = () => (
   <footer id="footer" className="bg-emerald-950 text-white py-12">
@@ -66,12 +67,20 @@ const Footer: React.FC = () => (
           rights reserved.
         </p>
         <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-          <Link href="#" className="hover:text-white transition-colors">
+          <Link
+            href={routes.privacyPolicy()}
+            className="hover:text-white transition-colors"
+          >
             Privacy Policy
           </Link>
-          <Link href="#" className="hover:text-white transition-colors">
+
+          <Link
+            href={routes.termsAndConditions()}
+            className="hover:text-white transition-colors"
+          >
             Terms of Service
           </Link>
+
           <Link href="#" className="hover:text-white transition-colors">
             Accessibility
           </Link>
