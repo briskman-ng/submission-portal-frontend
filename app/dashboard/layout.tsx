@@ -28,7 +28,7 @@ export default function DashboardLayout({
   };
 
   useEffect(() => {
-    if (userData && !user) updateUser(userData);
+    if (userData && !user) updateUser(userData?.user);
   }, [userData, user, updateUser]);
 
   if (isLoading && !user) {
@@ -41,8 +41,10 @@ export default function DashboardLayout({
     return <></>;
   }
 
-  if (user && user?.user?.userType !== "individual") {
-    toast.error("This is an application for players");
+  console.log(user)
+
+  if (user && user?.userType !== "individual") {
+    toast.error("This is an application for individuals");
     logout();
     return <></>;
   }

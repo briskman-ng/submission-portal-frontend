@@ -4,7 +4,7 @@ import { CurrentUser } from "@/types/current-user.type";
 import queryKeys from "../queryKeys";
 import { getItem } from "@/lib/sessionStorage";
 
-const getCurrentUser = get<CurrentUser>(authApi, "/me");
+const getCurrentUser = get<{ user: CurrentUser }>(authApi, "/me");
 
 const useGetCurrentUser = (enabled?: boolean) => {
   const authToken = getItem("authToken");

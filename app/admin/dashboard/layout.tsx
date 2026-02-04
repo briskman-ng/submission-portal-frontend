@@ -1,6 +1,5 @@
 "use client";
 
-import AdminHeader from "@/components/admin/AdminHeader";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AuthLoader from "@/components/auth-loader/auth-loader.component";
 import adminRoutes from "@/helpers/admin/routes";

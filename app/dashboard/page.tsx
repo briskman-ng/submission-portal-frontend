@@ -16,8 +16,7 @@ export default function DashboardPage() {
 
   const { data: submissionsData, isLoading: isLoadingSubmissions } =
     useGetMySubmissions();
-  const { data: submissionsStats, isLoading: isLoadingSubmissionsStats } =
-    useGetMySubmissionStats();
+  const { data: submissionsStats } = useGetMySubmissionStats();
 
   const filteredSubmissions = useMemo(() => {
     return (

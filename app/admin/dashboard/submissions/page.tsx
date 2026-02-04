@@ -8,7 +8,6 @@ import {
   Filter,
   ChevronDown,
   Eye,
-  Calendar,
   ArrowUpDown,
   X,
   Download,
@@ -48,7 +47,7 @@ export default function SubmissionsPage() {
     useGetAllSubmissions({ page, status });
 
   const filteredSubmissions = useMemo(() => {
-    let result = [...(submissionsData?.submissions ?? [])];
+    const result = [...(submissionsData?.submissions ?? [])];
 
     return result;
   }, [submissionsData]);

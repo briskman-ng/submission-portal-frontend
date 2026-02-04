@@ -1,18 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Activity,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  Bell,
-} from "lucide-react";
+import { LayoutDashboard, FileText, LogOut, ChevronLeft } from "lucide-react";
 import NDDCLogo from "@/components/NDDCLogo";
 import useLogOut from "@/hooks/useLogOut";
 import adminRoutes from "@/helpers/admin/routes";

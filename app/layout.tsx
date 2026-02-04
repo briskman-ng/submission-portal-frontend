@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ReduxProvider from "@/app/providers/ReduxProviders";
 import Providers from "./providers";
-import { ToastContainer, toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 
 export const metadata: Metadata = {
   title: "NDDC Connect Hub - Official Digital Gateway",

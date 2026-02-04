@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense, useMemo, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
@@ -22,6 +22,8 @@ import useGetSubmissionByTrackingNumber from "@/react-query/queries/useGetSubmis
 import dayjs from "dayjs";
 import { useQueryClient } from "@tanstack/react-query";
 import queryKeys from "@/react-query/queryKeys";
+import { AxiosError } from "axios";
+import { useRouter } from "next/navigation";
 
 const TIMELINE_DESC_MAP: Record<string, string> = {
   Submitted: "Submission received and logged into system",
@@ -33,10 +35,17 @@ const TIMELINE_DESC_MAP: Record<string, string> = {
 
 function TrackingContent() {
   const searchParams = useSearchParams();
-  const [trackingId, setTrackingId] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const autoFetchedRef = useRef(false);
+
+  const [trackingId, setTrackingId] = useState(searchParams.get("id") ?? "");
   const [activeTab, setActiveTab] = useState<"status" | "description">(
     "status",
   );
+
+  const urlTrackingId = useMemo(() => searchParams.get("id"), [searchParams]);
 
   const queryClient = useQueryClient();
 
@@ -50,16 +59,20 @@ function TrackingContent() {
     data: submission,
     isError,
     error,
-  } = useGetSubmissionByTrackingNumber(trackingId as string);
+  } = useGetSubmissionByTrackingNumber();
 
   useEffect(() => {
-    const idFromUrl = searchParams.get("id");
-    if (idFromUrl && !isLoadingSubmission) {
-      const id = idFromUrl.toUpperCase();
-      setTrackingId(id);
-      getSubmissionByTrackingNumber(id);
-    }
-  }, [searchParams]);
+    if (!urlTrackingId) return;
+    if (autoFetchedRef.current) return;
+
+    autoFetchedRef.current = true;
+    getSubmissionByTrackingNumber(urlTrackingId);
+    router.replace(pathname);
+  }, [urlTrackingId, getSubmissionByTrackingNumber, router, pathname]);
+
+  useEffect(() => {
+    autoFetchedRef.current = false;
+  }, [urlTrackingId]);
 
   const handleSearch = () => {
     if (trackingId.trim()) {
@@ -72,8 +85,6 @@ function TrackingContent() {
   };
   const handleSearchAfterLogin = () => {
     if (trackingId.trim()) {
-      // setSearchTrigger(true);
-      // refetch();
       getSubmissionByTrackingNumber(trackingId);
     }
   };
@@ -152,7 +163,8 @@ function TrackingContent() {
                   </h3>
                   <p className="text-red-600 text-sm">
                     {error && "data" in error
-                      ? (error.data as any)?.message ||
+                      ? (error.data as AxiosError<{ message: string }>)
+                          ?.message ||
                         "The tracking ID you entered could not be found."
                       : "The tracking ID you entered could not be found."}
                   </p>
@@ -337,7 +349,8 @@ function TrackingContent() {
           {!submission && !isError && !isLoadingSubmission && (
             <div className="text-center text-stone-500 text-sm">
               <p>
-                Can't find your tracking ID? Check your email confirmation or{" "}
+                Can&apos;t find your tracking ID? Check your email confirmation
+                or{" "}
                 <Link
                   href="/contact"
                   className="text-emerald-600 hover:underline"

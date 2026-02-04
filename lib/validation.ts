@@ -14,7 +14,8 @@ export const submissionSchema = z.object({
     .string()
     .min(1, "Submission type is required")
     .refine(
-      (val) => submissionTypes.includes(val as any),
+      (val) =>
+        submissionTypes.includes(val as (typeof submissionTypes)[number]),
       "Please select a valid submission type",
     ),
 

@@ -31,17 +31,18 @@ const Navigation = () => {
   console.log(currentUser);
 
   useEffect(() => {
-    if (currentUser && !user) updateUser(currentUser);
-  }, [currentUser]);
+    if (currentUser && !user) updateUser(currentUser.user);
+  }, [currentUser, updateUser, user]);
 
   const loginModalProps = useCreateModalProps();
+  const openLoginModalProps = loginModalProps.open;
 
   useEffect(() => {
     if (action && action === "login") {
-      loginModalProps?.open();
+      openLoginModalProps();
       router.push(pathname);
     }
-  }, [action, loginModalProps?.open]);
+  }, [action, openLoginModalProps, pathname, router]);
 
   return (
     <>

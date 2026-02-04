@@ -1,9 +1,8 @@
 import routes from "@/helpers/routes";
 import useRequestOTP from "@/react-query/mutations/useRequestOTP";
 import useVerifyOTP from "@/react-query/mutations/useVerifyOTP";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 interface IProps {
   onSuccess?: () => void;
@@ -12,7 +11,6 @@ interface IProps {
 
 export default function SignInComponent({ onSuccess, defaultValues }: IProps) {
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const [step, setStep] = useState<"email" | "otp">("email"); // 'email' or 'otp'
   const [email, setEmail] = useState(defaultValues?.email || "");
@@ -170,12 +168,18 @@ export default function SignInComponent({ onSuccess, defaultValues }: IProps) {
             disabled={loading || otp.length !== 6}
             className="w-full bg-teal-600 text-white py-3 rounded-lg font-medium hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed mb-4"
           >
-            {loading ? "Verifying..." : "Sign In"}
+            {loading
+              ? isVerifyingOTP
+                ? "Verifying..."
+                : isRequestingOTP
+                  ? "Resending OTP"
+                  : "Loading..."
+              : "Sign In"}
           </button>
 
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-2">
-              Didn't receive the code?
+              Didn&apos;t receive the code?
             </p>
             <button
               type="button"

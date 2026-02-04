@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, get } from "..";
 import queryKeys from "../queryKeys";
 import { Submission } from "@/types/submission.type";
@@ -8,11 +8,18 @@ const getSubmissionByTrackingNumber = get<Submission>(
   "/submissions/tracking/:trackingNumber",
 );
 
-const useGetSubmissionByTrackingNumber = (trackingNumber: string) => {
+const useGetSubmissionByTrackingNumber = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (trackingNumber: string) =>
       getSubmissionByTrackingNumber({ paramsMap: { trackingNumber } }),
-    mutationKey: [queryKeys.GET_SUBMISSION_BY_TRACKING_NUMBER],
+    onSuccess: (data, trackingId) => {
+      queryClient.setQueryData(
+        [queryKeys.GET_SUBMISSION_BY_TRACKING_NUMBER, trackingId],
+        data,
+      );
+    },
   });
 };
 

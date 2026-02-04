@@ -8,15 +8,8 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  TrendingUp,
   ArrowUpRight,
-  ArrowDownRight,
-  Calendar,
-  Filter,
-  Eye,
 } from "lucide-react";
-import { mockSubmissions, mockDashboardStats } from "@/lib/admin-mock-data";
-import { typeOptions } from "@/lib/admin-types";
 import useGetTodayDashboardStatistics from "@/react-query/admin/queries/useGetTodayDashboardStatistics";
 import { formatNumber } from "@/utils/formatters";
 import { statusOptions } from "@/components/admin/submission-actions/change-status.component";

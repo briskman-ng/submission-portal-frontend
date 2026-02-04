@@ -36,7 +36,7 @@ interface SubmissionType {
 
 const SubmissionForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
-    type: "" as any,
+    type: "",
     name: "",
     email: "",
     phone: "",
@@ -206,7 +206,7 @@ const SubmissionForm: React.FC = () => {
                   onClick={() =>
                     setFormData((prev) => ({
                       ...prev,
-                      type: prev.type === type.id ? "" : (type.id as any),
+                      type: prev.type === type.id ? "" : type.id,
                     }))
                   }
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-left ${

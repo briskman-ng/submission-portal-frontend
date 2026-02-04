@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import {
@@ -10,16 +9,10 @@ import {
   Download,
   Mail,
   MessageSquare,
-  Clock,
   User,
-  Phone,
-  Calendar,
   Paperclip,
   Send,
   AlertCircle,
-  CheckCircle,
-  X,
-  ChevronDown,
   History,
   Edit2,
   Flag,
@@ -27,19 +20,14 @@ import {
   Eye,
 } from "lucide-react";
 import { mockSubmissions } from "@/lib/admin-mock-data";
-import { typeOptions } from "@/lib/admin-types";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetSubmissionDetailsByTrackingNumber from "@/react-query/admin/queries/useGetSubmissionDetailsByTrackingNumber";
 import { formatFileSize } from "@/utils/formatters";
 import StatusBadge from "@/components/status-badge/status-badge.component";
 import Modal from "@/components/modal/modal.component";
 import useCreateModalProps from "@/hooks/useCreateModalProps";
-import ChangeSubmissionStatus, {
-  statusOptions,
-} from "@/components/admin/submission-actions/change-status.component";
-import SetSubmissionPriority, {
-  priorityOptions,
-} from "@/components/admin/submission-actions/set-submission-priority.component";
+import ChangeSubmissionStatus from "@/components/admin/submission-actions/change-status.component";
+import SetSubmissionPriority from "@/components/admin/submission-actions/set-submission-priority.component";
 import { Button } from "@/components/ui/button";
 import AddNoteToSubmission from "@/components/admin/submission-actions/add-note-to-submission.component";
 import ForwardSubmission from "@/components/admin/submission-actions/forward-submission.component";
@@ -49,8 +37,6 @@ interface PageProps {
 }
 
 export default function SubmissionDetailPage({ params }: PageProps) {
-  const router = useRouter();
-
   const { data: submission_, isLoading: isLoadingSubmission } =
     useGetSubmissionDetailsByTrackingNumber(params.id);
 
@@ -103,7 +89,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
             Submission Not Found
           </h2>
           <p className="text-stone-500 mt-2">
-            The submission you're looking for doesn't exist.
+            The submission you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link
             href={adminRoutes.submissions()}
@@ -116,15 +102,6 @@ export default function SubmissionDetailPage({ params }: PageProps) {
       </div>
     );
   }
-
-  const getStatusColor = (status: string) =>
-    statusOptions.find((s) => s.value === status)?.color ||
-    "bg-stone-100 text-stone-800";
-  const getPriorityColor = (priority: string) =>
-    priorityOptions.find((p) => p.value === priority)?.color ||
-    "bg-stone-100 text-stone-800";
-  const getTypeLabel = (type: string) =>
-    typeOptions.find((t) => t.value === type)?.label || type;
 
   const handleSendResponse = () => {
     console.log("Sending response:", responseData);
