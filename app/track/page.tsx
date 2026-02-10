@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense, useMemo, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
@@ -14,49 +14,70 @@ import {
 import StatusBadge from "@/components/StatusBadge";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { useGetSubmissionByTrackingNumberQuery } from "@/app/api/submissionsApi";
-import dayjs from "dayjs";
 import useUserStore from "@/store/user-store";
 import Modal from "@/components/modal/modal.component";
 import SignInComponent from "@/components/auth/sign-in/sign-in.component";
 import useCreateModalProps from "@/hooks/useCreateModalProps";
+import useGetSubmissionByTrackingNumber from "@/react-query/queries/useGetSubmissionByTrackingNumber";
+import dayjs from "dayjs";
+import { useQueryClient } from "@tanstack/react-query";
+import queryKeys from "@/react-query/queryKeys";
+import { AxiosError } from "axios";
+import { useRouter } from "next/navigation";
+
+const TIMELINE_DESC_MAP: Record<string, string> = {
+  Submitted: "Submission received and logged into system",
+  "Under Review": "Assigned for initial review",
+  Processing: "Detailed assessment and verification",
+  Decision: "Final decision and response preparation",
+  Completed: "Resolution communicated to submitter",
+};
 
 function TrackingContent() {
   const searchParams = useSearchParams();
-  const [trackingId, setTrackingId] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const autoFetchedRef = useRef(false);
+
+  const [trackingId, setTrackingId] = useState(searchParams.get("id") ?? "");
   const [activeTab, setActiveTab] = useState<"status" | "description">(
     "status",
   );
-  const [searchTrigger, setSearchTrigger] = useState(false);
+
+  const urlTrackingId = useMemo(() => searchParams.get("id"), [searchParams]);
+
+  const queryClient = useQueryClient();
 
   const user = useUserStore((state) => state.user);
 
   const signInModalProps = useCreateModalProps();
 
-  // Use the query hook with skip option
   const {
+    mutate: getSubmissionByTrackingNumber,
+    isPending: isLoadingSubmission,
     data: submission,
-    isLoading: isSearching,
     isError,
     error,
-    refetch,
-  } = useGetSubmissionByTrackingNumberQuery(trackingId, {
-    skip: !trackingId || !searchTrigger,
-  });
+  } = useGetSubmissionByTrackingNumber();
 
   useEffect(() => {
-    const idFromUrl = searchParams.get("id");
-    if (idFromUrl) {
-      setTrackingId(idFromUrl.toUpperCase());
-      setSearchTrigger(true);
-    }
-  }, [searchParams]);
+    if (!urlTrackingId) return;
+    if (autoFetchedRef.current) return;
+
+    autoFetchedRef.current = true;
+    getSubmissionByTrackingNumber(urlTrackingId);
+    router.replace(pathname);
+  }, [urlTrackingId, getSubmissionByTrackingNumber, router, pathname]);
+
+  useEffect(() => {
+    autoFetchedRef.current = false;
+  }, [urlTrackingId]);
 
   const handleSearch = () => {
     if (trackingId.trim()) {
       if (user) {
-        setSearchTrigger(true);
-        refetch();
+        getSubmissionByTrackingNumber(trackingId);
       } else {
         signInModalProps.open();
       }
@@ -64,8 +85,7 @@ function TrackingContent() {
   };
   const handleSearchAfterLogin = () => {
     if (trackingId.trim()) {
-      setSearchTrigger(true);
-      refetch();
+      getSubmissionByTrackingNumber(trackingId);
     }
   };
 
@@ -75,105 +95,20 @@ function TrackingContent() {
     }
   };
 
-  // Format timeline from API data
-  const getTimeline = () => {
-    if (!submission) return [];
+  const visibleStages = useMemo(() => {
+    const stages = submission?.timeline ?? [];
 
-    const timeline = [
-      {
-        status: "Submitted",
-        date: dayjs(submission.createdAt).format("MMM DD, YYYY"),
-        description: "Submission received and logged into system",
-        completed: true,
-      },
-      {
-        status: "Under Review",
-        date: submission.reviewDate
-          ? dayjs(submission.reviewDate).format("MMM DD, YYYY")
-          : "Pending",
-        description: submission.department
-          ? `Assigned to ${submission.department} for initial review`
-          : "Assigned for initial review",
-        completed: !!submission.reviewDate,
-        current: submission.status === "under_review",
-      },
-      {
-        status: "Processing",
-        date: submission.processingDate
-          ? dayjs(submission.processingDate).format("MMM DD, YYYY")
-          : "Pending",
-        description: "Detailed assessment and verification",
-        completed: !!submission.processingDate,
-        current: submission.status === "processing",
-      },
-      {
-        status: "Decision",
-        date: submission.decisionDate
-          ? dayjs(submission.decisionDate).format("MMM DD, YYYY")
-          : "Pending",
-        description: "Final decision and response preparation",
-        completed: !!submission.decisionDate,
-        current: submission.status === "decision_pending",
-      },
-      {
-        status: "Completed",
-        date: submission.completedDate
-          ? dayjs(submission.completedDate).format("MMM DD, YYYY")
-          : "Pending",
-        description: "Resolution communicated to submitter",
-        completed: !!submission.completedDate,
-        current: submission.status === "completed",
-      },
-    ];
+    return stages?.filter((stage, index) => {
+      if (stage.status === "completed") return true;
 
-    return timeline;
-  };
+      // check if any later stage is completed
+      const hasCompletedAfter = stages
+        .slice(index + 1)
+        .some((s) => s.status === "completed" || s.status === "active");
 
-  // Calculate last updated time
-  const getLastUpdated = () => {
-    if (!submission) return "Unknown";
-
-    const lastUpdated = submission.updatedAt || submission.createdAt;
-    const now = new Date();
-    const updated = new Date(lastUpdated);
-    const diffInHours = Math.floor(
-      (now.getTime() - updated.getTime()) / (1000 * 60 * 60),
-    );
-
-    if (diffInHours < 1) {
-      const diffInMinutes = Math.floor(
-        (now.getTime() - updated.getTime()) / (1000 * 60),
-      );
-      return `${diffInMinutes} minute${diffInMinutes !== 1 ? "s" : ""} ago`;
-    } else if (diffInHours < 24) {
-      return `${diffInHours} hour${diffInHours !== 1 ? "s" : ""} ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays} day${diffInDays !== 1 ? "s" : ""} ago`;
-    }
-  };
-
-  // Get expected response time
-  const getExpectedResponse = () => {
-    if (!submission) return "Unknown";
-
-    const created = new Date(submission.createdAt);
-    const expected = new Date(created);
-    expected.setDate(expected.getDate() + (submission.expectedDays || 5));
-
-    const today = new Date();
-    const diffInDays = Math.ceil(
-      (expected.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (diffInDays <= 0) {
-      return "Today";
-    } else if (diffInDays === 1) {
-      return "Tomorrow";
-    } else {
-      return `Within ${diffInDays} days`;
-    }
-  };
+      return !hasCompletedAfter;
+    });
+  }, [submission]);
 
   return (
     <>
@@ -203,10 +138,10 @@ function TrackingContent() {
                 />
                 <button
                   onClick={handleSearch}
-                  disabled={!trackingId.trim() || isSearching}
+                  disabled={!trackingId.trim() || isLoadingSubmission}
                   className="bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-800 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSearching ? (
+                  {isLoadingSubmission ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <Search className="w-5 h-5" />
@@ -218,7 +153,7 @@ function TrackingContent() {
           </div>
 
           {/* Error State */}
-          {isError && searchTrigger && (
+          {isError && trackingId && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8 animate-fade-in-up">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
@@ -228,7 +163,8 @@ function TrackingContent() {
                   </h3>
                   <p className="text-red-600 text-sm">
                     {error && "data" in error
-                      ? (error.data as any)?.message ||
+                      ? (error.data as AxiosError<{ message: string }>)
+                          ?.message ||
                         "The tracking ID you entered could not be found."
                       : "The tracking ID you entered could not be found."}
                   </p>
@@ -253,9 +189,7 @@ function TrackingContent() {
                     <StatusBadge status={submission.status || "pending"} />
                   </div>
                   <p className="text-stone-600 text-sm">
-                    {submission.projectTitle ||
-                      submission.title ||
-                      "Submission Details"}
+                    {submission.title || "Submission Details"}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -308,27 +242,27 @@ function TrackingContent() {
                     <h3 className="font-semibold text-stone-800 mb-6">
                       Submission Timeline
                     </h3>
+
                     <div className="relative">
-                      {getTimeline().map((item, i, array) => (
+                      {visibleStages?.map((item, i, array) => (
                         <div key={i} className="flex gap-4 pb-8 last:pb-0">
                           <div className="flex flex-col items-center">
                             <div
                               className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                item.completed
-                                  ? item.current
-                                    ? "bg-emerald-500 ring-4 ring-emerald-100"
-                                    : "bg-emerald-500"
+                                item.status === "completed"
+                                  ? "bg-emerald-500 ring-4 ring-emerald-100"
                                   : "bg-stone-200"
                               }`}
                             >
-                              {item.completed && (
+                              {item.status === "completed" && (
                                 <CheckCircle className="w-3 h-3 text-white" />
                               )}
                             </div>
+
                             {i < array.length - 1 && (
                               <div
                                 className={`w-0.5 flex-1 mt-2 ${
-                                  item.completed
+                                  item.status === "completed"
                                     ? "bg-emerald-300"
                                     : "bg-stone-200"
                                 }`}
@@ -337,7 +271,7 @@ function TrackingContent() {
                           </div>
                           <div
                             className={`flex-1 ${
-                              item.current
+                              item.status === "active"
                                 ? "bg-emerald-50 -mx-3 px-3 py-2 rounded-lg border border-emerald-100"
                                 : ""
                             }`}
@@ -345,33 +279,42 @@ function TrackingContent() {
                             <div className="flex items-center justify-between">
                               <p
                                 className={`font-medium ${
-                                  item.completed
+                                  item.status === "completed"
                                     ? "text-stone-800"
                                     : "text-stone-400"
                                 }`}
                               >
-                                {item.status}
+                                {item.name}
                               </p>
+
                               <span
-                                className={`text-xs ${
-                                  item.completed
+                                className={`capitalize text-xs ${
+                                  item.status === "completed"
                                     ? "text-stone-500"
                                     : "text-stone-300"
                                 }`}
                               >
-                                {item.date}
+                                {item.completedAt ? (
+                                  dayjs(item.completedAt).format(
+                                    "HH:mmA MMM DD, YYYY",
+                                  )
+                                ) : (
+                                  <StatusBadge status={item.status} />
+                                )}
                               </span>
                             </div>
+
                             <p
                               className={`text-sm mt-1 ${
-                                item.completed
+                                item.status === "completed"
                                   ? "text-stone-600"
                                   : "text-stone-400"
                               }`}
                             >
-                              {item.description}
+                              {TIMELINE_DESC_MAP[item.name] ?? ""}
                             </p>
-                            {item.current && (
+
+                            {item.status === "active" && (
                               <div className="flex items-center gap-2 mt-2 text-emerald-700 text-sm">
                                 <RefreshCw className="w-3 h-3 animate-spin" />
                                 Currently at this stage
@@ -380,33 +323,6 @@ function TrackingContent() {
                           </div>
                         </div>
                       ))}
-                    </div>
-
-                    {/* Additional Info */}
-                    <div className="px-6 pb-6">
-                      <div className="bg-stone-50 rounded-xl p-4 grid md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-stone-500">Assigned Department</p>
-                          <p className="font-medium text-stone-800">
-                            {submission.department || "Not yet assigned"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500">Expected Response</p>
-                          {/* <p className="font-medium text-stone-800">
-                          {getExpectedResponse()}
-                        </p> */}
-                          <p className="font-medium text-stone-800">
-                            Within 3 days
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-stone-500">Last Updated</p>
-                          <p className="font-medium text-stone-800">
-                            {getLastUpdated()}
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </>
                 )}
@@ -420,44 +336,9 @@ function TrackingContent() {
                       <div>
                         <p className="text-sm text-stone-600 whitespace-pre-line">
                           {submission.description ||
-                            submission.projectDescription ||
                             "No description available."}
                         </p>
                       </div>
-
-                      {/* Additional details if available */}
-                      {(submission.category ||
-                        submission.location ||
-                        submission.submitterName) && (
-                        <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-stone-200">
-                          {submission.category && (
-                            <div>
-                              <p className="text-stone-500 text-sm">Category</p>
-                              <p className="font-medium text-stone-800 text-sm">
-                                {submission.category}
-                              </p>
-                            </div>
-                          )}
-                          {submission.location && (
-                            <div>
-                              <p className="text-stone-500 text-sm">Location</p>
-                              <p className="font-medium text-stone-800 text-sm">
-                                {submission.location}
-                              </p>
-                            </div>
-                          )}
-                          {submission.submitterName && (
-                            <div className="md:col-span-2">
-                              <p className="text-stone-500 text-sm">
-                                Submitted By
-                              </p>
-                              <p className="font-medium text-stone-800 text-sm">
-                                {submission.submitterName}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -465,10 +346,11 @@ function TrackingContent() {
             </div>
           )}
 
-          {!submission && !isError && !isSearching && (
+          {!submission && !isError && !isLoadingSubmission && (
             <div className="text-center text-stone-500 text-sm">
               <p>
-                Can't find your tracking ID? Check your email confirmation or{" "}
+                Can&apos;t find your tracking ID? Check your email confirmation
+                or{" "}
                 <Link
                   href="/contact"
                   className="text-emerald-600 hover:underline"
@@ -489,6 +371,9 @@ function TrackingContent() {
       >
         <SignInComponent
           onSuccess={() => {
+            queryClient.refetchQueries({
+              queryKey: [queryKeys.GET_CURRENT_USER],
+            });
             signInModalProps.close();
             handleSearchAfterLogin();
           }}

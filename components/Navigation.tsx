@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { X, Menu } from "lucide-react";
+import { X, Menu, Loader2 } from "lucide-react";
 import NDDCLogo from "./NDDCLogo";
 import useGetCurrentUser from "@/react-query/queries/useGetCurrentUser";
 import useUserStore from "@/store/user-store";
@@ -31,20 +31,21 @@ const Navigation = () => {
   console.log(currentUser);
 
   useEffect(() => {
-    if (currentUser && !user) updateUser(currentUser);
-  }, [currentUser]);
+    if (currentUser && !user) updateUser(currentUser.user);
+  }, [currentUser, updateUser, user]);
 
   const loginModalProps = useCreateModalProps();
+  const openLoginModalProps = loginModalProps.open;
 
   useEffect(() => {
     if (action && action === "login") {
-      loginModalProps?.open();
+      openLoginModalProps();
       router.push(pathname);
     }
-  }, [action, loginModalProps?.open]);
+  }, [action, openLoginModalProps, pathname, router]);
 
   return (
-    <>
+    <Suspense>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
@@ -164,8 +165,22 @@ const Navigation = () => {
       >
         <SignInComponent />
       </Modal>
-    </>
+    </Suspense>
   );
 };
 
-export default Navigation;
+export default function NavigationComponent() {
+  return (
+    <>
+      <Suspense
+        fallback={
+          <section className="pt-20 min-h-screen mesh-gradient pattern-overlay flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+          </section>
+        }
+      >
+        <Navigation />
+      </Suspense>
+    </>
+  );
+}

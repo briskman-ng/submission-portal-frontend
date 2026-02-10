@@ -21,30 +21,40 @@ export default function DashboardLayout({
 
   const { data: userData, isLoading } = useGetCurrentUser(!user);
 
+  const isAuthenticated = !!user || !!userData;
+
   const logout = useLogOut();
 
-  const handleRedirect = () => {
-    return router.push(routes.home() + "?action=login");
-  };
+  useEffect(() => {
+    if (isLoading) return;
+
+    // Not logged in
+    if (!user && !userData) {
+      router.push(routes.home() + "?action=login");
+      return;
+    }
+
+    // Sync store
+    if (!user && userData) {
+      updateUser(userData.user);
+    }
+  }, [isLoading, user, userData, updateUser, router]);
 
   useEffect(() => {
-    if (userData && !user) updateUser(userData);
-  }, [userData, user, updateUser]);
+    if (!user) return;
 
-  if (isLoading && !user) {
+    if (user.userType !== "individual") {
+      toast.error("This is an application for individuals");
+      logout();
+    }
+  }, [user, logout]);
+
+  if (isLoading && !isAuthenticated) {
     return <AuthLoader />;
   }
 
-  if (!isLoading && !user && !userData) {
-    handleRedirect();
-
-    return <></>;
-  }
-
-  if (user && user?.user?.userType !== "individual") {
-    toast.error("This is an application for players");
-    logout();
-    return <></>;
+  if (!isLoading && !isAuthenticated) {
+    return null;
   }
 
   return (

@@ -5,13 +5,6 @@ import { toast } from "react-toastify";
 import routes from "@/helpers/routes";
 import { useRouter } from "next/navigation";
 
-interface ICreateSubmissionPayload {
-  type: string;
-  title: string;
-  description: string;
-  files?: File[];
-}
-
 interface ICreateSubmissionResponse {
   id: string;
   trackingNumber: string;

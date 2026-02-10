@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import {
@@ -10,16 +9,10 @@ import {
   Download,
   Mail,
   MessageSquare,
-  Clock,
   User,
-  Phone,
-  Calendar,
   Paperclip,
   Send,
   AlertCircle,
-  CheckCircle,
-  X,
-  ChevronDown,
   History,
   Edit2,
   Flag,
@@ -27,29 +20,23 @@ import {
   Eye,
 } from "lucide-react";
 import { mockSubmissions } from "@/lib/admin-mock-data";
-import { typeOptions, departments } from "@/lib/admin-types";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetSubmissionDetailsByTrackingNumber from "@/react-query/admin/queries/useGetSubmissionDetailsByTrackingNumber";
 import { formatFileSize } from "@/utils/formatters";
 import StatusBadge from "@/components/status-badge/status-badge.component";
 import Modal from "@/components/modal/modal.component";
 import useCreateModalProps from "@/hooks/useCreateModalProps";
-import ChangeSubmissionStatus, {
-  statusOptions,
-} from "@/components/admin/submission-actions/change-status.component";
-import SetSubmissionPriority, {
-  priorityOptions,
-} from "@/components/admin/submission-actions/set-submission-priority.component";
+import ChangeSubmissionStatus from "@/components/admin/submission-actions/change-status.component";
+import SetSubmissionPriority from "@/components/admin/submission-actions/set-submission-priority.component";
 import { Button } from "@/components/ui/button";
 import AddNoteToSubmission from "@/components/admin/submission-actions/add-note-to-submission.component";
+import ForwardSubmission from "@/components/admin/submission-actions/forward-submission.component";
 
 interface PageProps {
   params: { id: string };
 }
 
 export default function SubmissionDetailPage({ params }: PageProps) {
-  const router = useRouter();
-
   const { data: submission_, isLoading: isLoadingSubmission } =
     useGetSubmissionDetailsByTrackingNumber(params.id);
 
@@ -58,28 +45,16 @@ export default function SubmissionDetailPage({ params }: PageProps) {
   const changeStatusModalProps = useCreateModalProps();
   const setPriorityModalProps = useCreateModalProps();
   const addNoteModalProps = useCreateModalProps();
+  const forwardSubmissionModalProps = useCreateModalProps();
 
   const [activeTab, setActiveTab] = useState<
     "details" | "notes" | "responses" | "history"
   >("details");
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showPriorityModal, setShowPriorityModal] = useState(false);
-  const [showForwardModal, setShowForwardModal] = useState(false);
-  const [showNoteModal, setShowNoteModal] = useState(false);
+
   const [showResponseModal, setShowResponseModal] = useState(false);
 
   // Form states
-  const [newStatus, setNewStatus] = useState(submission?.status || "");
-  const [newPriority, setNewPriority] = useState(submission?.priority || "");
-  const [forwardData, setForwardData] = useState({
-    department: "",
-    email: "",
-    cc: "",
-    message: "",
-    includeAttachments: true,
-  });
-  const [noteContent, setNoteContent] = useState("");
-  const [notePrivate, setNotePrivate] = useState(false);
+
   const [responseData, setResponseData] = useState({
     type: "holding" as "holding" | "detailed" | "final",
     content: "",
@@ -114,7 +89,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
             Submission Not Found
           </h2>
           <p className="text-stone-500 mt-2">
-            The submission you're looking for doesn't exist.
+            The submission you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link
             href={adminRoutes.submissions()}
@@ -127,35 +102,6 @@ export default function SubmissionDetailPage({ params }: PageProps) {
       </div>
     );
   }
-
-  const getStatusColor = (status: string) =>
-    statusOptions.find((s) => s.value === status)?.color ||
-    "bg-stone-100 text-stone-800";
-  const getPriorityColor = (priority: string) =>
-    priorityOptions.find((p) => p.value === priority)?.color ||
-    "bg-stone-100 text-stone-800";
-  const getTypeLabel = (type: string) =>
-    typeOptions.find((t) => t.value === type)?.label || type;
-
-  const handleStatusChange = () => {
-    console.log("Status changed to:", newStatus);
-    setShowStatusModal(false);
-  };
-  const handlePriorityChange = () => {
-    console.log("Priority changed to:", newPriority);
-    setShowPriorityModal(false);
-  };
-  const handleForward = () => {
-    console.log("Forwarding to:", forwardData);
-    setShowForwardModal(false);
-    setForwardData({
-      department: "",
-      email: "",
-      cc: "",
-      message: "",
-      includeAttachments: true,
-    });
-  };
 
   const handleSendResponse = () => {
     console.log("Sending response:", responseData);
@@ -202,8 +148,8 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
                 <Button
                   variant={"ghost"}
-                  disabled
-                  onClick={() => setShowForwardModal(true)}
+                  // disabled
+                  onClick={forwardSubmissionModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                 >
                   <Forward className="w-4 h-4" /> Forward to Department
@@ -309,9 +255,16 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                               <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-white rounded-lg transition-colors">
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-colors">
+
+                              <a
+                                href={file.downloadUrl}
+                                download={file.originalName}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="cursor-pointer p-2 text-stone-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-colors"
+                              >
                                 <Download className="w-4 h-4" />
-                              </button>
+                              </a>
                             </div>
                           </div>
                         ))}
@@ -480,7 +433,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                   <StatusBadge status={submission_.priority} />
                 </div>
 
-                {submission.assignedDepartment && (
+                {/* {submission.assignedDepartment && (
                   <div>
                     <p className="text-xs text-stone-500 mb-1">Assigned To</p>
                     <p className="text-sm font-medium text-stone-800">
@@ -492,7 +445,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                       </p>
                     )}
                   </div>
-                )}
+                )} */}
               </div>
             </div>
 
@@ -572,85 +525,19 @@ export default function SubmissionDetailPage({ params }: PageProps) {
         />
       </Modal>
 
-      {/* Forward Modal */}
-      {showForwardModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">
-              Forward to Department
-            </h3>
-            <select
-              className="w-full border border-stone-300 rounded-lg p-2 mb-2"
-              value={forwardData.department}
-              onChange={(e) =>
-                setForwardData({ ...forwardData, department: e.target.value })
-              }
-            >
-              <option value="">Select Department</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full border border-stone-300 rounded-lg p-2 mb-2"
-              value={forwardData.email}
-              onChange={(e) =>
-                setForwardData({ ...forwardData, email: e.target.value })
-              }
-            />
-            <input
-              type="email"
-              placeholder="CC"
-              className="w-full border border-stone-300 rounded-lg p-2 mb-2"
-              value={forwardData.cc}
-              onChange={(e) =>
-                setForwardData({ ...forwardData, cc: e.target.value })
-              }
-            />
-            <textarea
-              placeholder="Message"
-              className="w-full border border-stone-300 rounded-lg p-2 mb-2"
-              value={forwardData.message}
-              onChange={(e) =>
-                setForwardData({ ...forwardData, message: e.target.value })
-              }
-            />
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="checkbox"
-                checked={forwardData.includeAttachments}
-                onChange={(e) =>
-                  setForwardData({
-                    ...forwardData,
-                    includeAttachments: e.target.checked,
-                  })
-                }
-              />
-              <label className="text-sm text-stone-700">
-                Include Attachments
-              </label>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300"
-                onClick={() => setShowForwardModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={handleForward}
-              >
-                Forward
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        title="Forward Submission"
+        description=""
+        {...forwardSubmissionModalProps}
+      >
+        <ForwardSubmission
+          closeModal={forwardSubmissionModalProps.close}
+          identifier={{
+            id: submission_.id,
+            trackingNumber: submission_.trackingNumber,
+          }}
+        />
+      </Modal>
 
       {/* Response Modal */}
       {showResponseModal && (

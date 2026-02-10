@@ -1,10 +1,7 @@
-import { store } from "@/store";
-
 export interface Login {
   email: string;
   password: string;
 }
-
 
 // types/index.ts
 export interface ContactInformation {
@@ -63,7 +60,3 @@ export interface SubmissionState {
   success: boolean;
   trackingNumber: string | null;
 }
-
-
-
-export type RootState = ReturnType<typeof store.getState>;

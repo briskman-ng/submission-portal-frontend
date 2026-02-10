@@ -21,6 +21,8 @@ import SignInComponent from "./auth/sign-in/sign-in.component";
 import useCreateModalProps from "@/hooks/useCreateModalProps";
 import useCreateSubmissionForGuest from "@/react-query/mutations/useCreateSubmissionForGuest";
 import { formatFileSize } from "@/utils/formatters";
+import Link from "next/link";
+import routes from "@/helpers/routes";
 
 type FormData = z.infer<typeof submissionSchema> & {
   name: string;
@@ -36,7 +38,7 @@ interface SubmissionType {
 
 const SubmissionForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
-    type: "" as any,
+    type: "",
     name: "",
     email: "",
     phone: "",
@@ -206,7 +208,7 @@ const SubmissionForm: React.FC = () => {
                   onClick={() =>
                     setFormData((prev) => ({
                       ...prev,
-                      type: prev.type === type.id ? "" : (type.id as any),
+                      type: prev.type === type.id ? "" : type.id,
                     }))
                   }
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-left ${
@@ -460,13 +462,21 @@ const SubmissionForm: React.FC = () => {
 
           <p className="text-xs text-center text-stone-500">
             By submitting, you agree to our{" "}
-            <a href="#" className="text-emerald-600 hover:underline">
+            <Link
+              target="_blank"
+              href={routes.termsAndConditions()}
+              className="text-emerald-600 hover:underline"
+            >
               Terms
-            </a>{" "}
+            </Link>{" "}
             &{" "}
-            <a href="#" className="text-emerald-600 hover:underline">
+            <Link
+              target="_blank"
+              href={routes.privacyPolicy()}
+              className="text-emerald-600 hover:underline"
+            >
               Privacy Policy
-            </a>
+            </Link>
           </p>
         </form>
       </div>

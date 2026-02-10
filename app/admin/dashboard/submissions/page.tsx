@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import {
@@ -8,11 +8,11 @@ import {
   Filter,
   ChevronDown,
   Eye,
-  Calendar,
   ArrowUpDown,
   X,
   Download,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { typeOptions } from "@/lib/admin-types";
 import adminRoutes from "@/helpers/admin/routes";
@@ -24,7 +24,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/utils/util";
 import getPaginationRange from "@/utils/getPaginationRange";
 
-export default function SubmissionsPage() {
+function SubmissionsPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -48,7 +48,7 @@ export default function SubmissionsPage() {
     useGetAllSubmissions({ page, status });
 
   const filteredSubmissions = useMemo(() => {
-    let result = [...(submissionsData?.submissions ?? [])];
+    const result = [...(submissionsData?.submissions ?? [])];
 
     return result;
   }, [submissionsData]);
@@ -598,6 +598,22 @@ export default function SubmissionsPage() {
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function SubmissionsPage() {
+  return (
+    <>
+      <Suspense
+        fallback={
+          <section className="pt-20 min-h-screen mesh-gradient pattern-overlay flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+          </section>
+        }
+      >
+        <SubmissionsPageContent />
+      </Suspense>
     </>
   );
 }
