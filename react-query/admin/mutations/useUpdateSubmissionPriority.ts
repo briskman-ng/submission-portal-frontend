@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import queryKeys from "../queryKeys";
 import { toast } from "react-toastify";
 
-interface IUpdateSubmissionPriority {
+export interface IUpdateSubmissionPriority {
   priority: string;
   reason?: string;
 }

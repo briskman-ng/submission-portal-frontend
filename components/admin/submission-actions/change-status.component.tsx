@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
-import useUpdateSubmissionStatus from "@/react-query/admin/mutations/useUpdateSubmissionStatus";
+import useUpdateSubmissionStatus, {
+  IUpdateSubmissionStatus,
+} from "@/react-query/admin/mutations/useUpdateSubmissionStatus";
 import { useState } from "react";
 
 export const statusOptions = [
@@ -41,6 +43,7 @@ interface IProps {
 
 const ChangeSubmissionStatus = ({ status, closeModal, identifier }: IProps) => {
   const [newStatus, setNewStatus] = useState(status || "");
+  const [reason, setReason] = useState("");
 
   const {
     mutate: updateSubmissionStatus,
@@ -48,6 +51,10 @@ const ChangeSubmissionStatus = ({ status, closeModal, identifier }: IProps) => {
   } = useUpdateSubmissionStatus(identifier, () => setTimeout(closeModal, 400));
 
   const handleUpdateSubmissionStatus = () => {
+    const payload: IUpdateSubmissionStatus = { status: newStatus };
+
+    if (reason) payload.reason = reason;
+
     updateSubmissionStatus({ status: newStatus });
   };
 
@@ -64,6 +71,14 @@ const ChangeSubmissionStatus = ({ status, closeModal, identifier }: IProps) => {
           </option>
         ))}
       </select>
+
+      <input
+        className="w-full border border-stone-300 rounded-lg p-2 mb-4"
+        value={reason}
+        placeholder="Enter reason"
+        onChange={(e) => setReason(e.target.value)}
+      />
+
       <div className="flex justify-end gap-3">
         <Button
           variant={"ghost"}
