@@ -396,7 +396,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                               </p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-xs text-stone-500">
-                                  {log.adminUser.name}
+                                  {log?.adminUser?.name ?? "N/A"}
                                 </span>
                                 <span className="text-stone-300">•</span>
                                 <span className="text-xs text-stone-400">
