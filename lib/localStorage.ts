@@ -1,4 +1,4 @@
-type keys = "access" | "refresh" | "hide-balance";
+type keys = "accessToken" | "refreshToken";
 
 export const setItem = (key: keys, data: string) => {
   return localStorage.setItem(key, data);

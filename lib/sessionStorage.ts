@@ -1,23 +1,25 @@
 type Keys = "authToken";
 
-const isBrowser = typeof window !== "undefined";
+// TODO - refactor.
+
+// const isBrowser = typeof window !== "undefined";
 
 export const setItem = (key: Keys, data: string) => {
-  if (!isBrowser) return;
+  // if (!isBrowser) return;
   sessionStorage.setItem(key, data);
 };
 
 export const getItem = (key: Keys) => {
-  if (!isBrowser) return null;
+  // if (!isBrowser) return;
   return sessionStorage.getItem(key);
 };
 
 export const removeItem = (key: Keys) => {
-  if (!isBrowser) return;
+  // if (!isBrowser) return;
   sessionStorage.removeItem(key);
 };
 
 export const clearItems = () => {
-  if (!isBrowser) return;
+  // if (!isBrowser) return;
   sessionStorage.clear();
 };
