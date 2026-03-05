@@ -5,7 +5,6 @@ import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import {
   FileText,
-  Clock,
   CheckCircle2,
   AlertTriangle,
   ArrowUpRight,
@@ -17,10 +16,10 @@ import { priorityOptions } from "@/components/admin/submission-actions/set-submi
 import adminRoutes from "@/helpers/admin/routes";
 import useGetAllSubmissions from "@/react-query/admin/queries/useGetAllSubmissions";
 import useGetThisWeekDashboardStatistics from "@/react-query/admin/queries/useGetThisWeekDashboardStatistics";
-import { TodayDashboardStatistics } from "@/types/admin/today-dashboard-statistics.type";
 import useGetSubmissionStatusStats from "@/react-query/admin/queries/useGetSubmissionStatusStats";
 import { SubmissionStatusStats } from "@/types/admin/submission-status-stats.type";
 import useGetDashboardStatistics from "@/react-query/admin/queries/useGetDashboardStatistics";
+import { Stats } from "@/types/admin/dashboard-statistics.type";
 
 const typeLabels: Record<string, string> = {
   project_proposal: "Project Proposal",
@@ -46,7 +45,7 @@ export default function AdminDashboardPage() {
         ? todayDashboardStatistics
         : dateFilter === "week"
           ? weekDashboardStatistics
-          : ({} as TodayDashboardStatistics);
+          : ({} as Stats);
     return [
       {
         label: "Total Submissions",
@@ -54,14 +53,6 @@ export default function AdminDashboardPage() {
         icon: FileText,
         color: "bg-blue-500",
         change: "+12%",
-        changeType: "up",
-      },
-      {
-        label: "New Today",
-        value: formatNumber(origin?.newSubmissions ?? 0),
-        icon: Clock,
-        color: "bg-amber-500",
-        change: "+3",
         changeType: "up",
       },
       {
@@ -73,7 +64,7 @@ export default function AdminDashboardPage() {
         changeType: "down",
       },
       {
-        label: "Completed Today",
+        label: "Completed",
         value: formatNumber(origin?.completedSubmissions ?? 0),
         icon: CheckCircle2,
         color: "bg-emerald-500",
