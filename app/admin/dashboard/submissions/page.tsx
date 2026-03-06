@@ -23,6 +23,8 @@ import { priorityOptions } from "@/components/admin/submission-actions/set-submi
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/utils/util";
 import getPaginationRange from "@/utils/getPaginationRange";
+import { useQueryClient } from "@tanstack/react-query";
+import queryKeys from "@/react-query/admin/queryKeys";
 
 function SubmissionsPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,7 +37,7 @@ function SubmissionsPageContent() {
     status: "",
     priority: "",
   });
-  const [sortBy, setSortBy] = useState<"date" | "priority" | "status">("date");
+  const [sortBy] = useState<"date" | "priority" | "status">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const searchParams = useSearchParams();
@@ -46,6 +48,8 @@ function SubmissionsPageContent() {
 
   const { data: submissionsData, isLoading: isLoadingSubmissions } =
     useGetAllSubmissions({ page, status });
+
+  const queryClient = useQueryClient();
 
   const filteredSubmissions = useMemo(() => {
     const result = [...(submissionsData?.submissions ?? [])];
@@ -192,6 +196,12 @@ function SubmissionsPageContent() {
     if (!submissionsData) return [];
     return getPaginationRange(submissionsData.page, submissionsData.totalPages);
   }, [submissionsData]);
+
+  const handleRefresh = () => {
+    queryClient.resetQueries({
+      queryKey: [queryKeys.GET_ALL_SUBMISSIONS],
+    });
+  };
 
   return (
     <>
@@ -408,7 +418,11 @@ function SubmissionsPageContent() {
                 <Download className="w-4 h-4" />
                 Export
               </button>
-              <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
+
+              <button
+                onClick={handleRefresh}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+              >
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </button>

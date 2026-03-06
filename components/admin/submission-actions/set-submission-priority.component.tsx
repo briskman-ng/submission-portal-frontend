@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
-import useUpdateSubmissionPriority from "@/react-query/admin/mutations/useUpdateSubmissionPriority";
+import useUpdateSubmissionPriority, {
+  IUpdateSubmissionPriority,
+} from "@/react-query/admin/mutations/useUpdateSubmissionPriority";
 import { useState } from "react";
 
 export const priorityOptions = [
@@ -21,6 +23,7 @@ const SetSubmissionPriority = ({
   priority,
 }: IProps) => {
   const [newPriority, setNewPriority] = useState(priority || "");
+  const [reason, setReason] = useState("");
 
   const {
     mutate: updateSubmissionPriority,
@@ -30,7 +33,11 @@ const SetSubmissionPriority = ({
   );
 
   const handleUpdateSubmissionPriority = () => {
-    updateSubmissionPriority({ priority: newPriority });
+    const payload: IUpdateSubmissionPriority = { priority: newPriority };
+
+    if (reason) payload.reason = reason;
+
+    updateSubmissionPriority(payload);
   };
 
   return (
@@ -46,6 +53,14 @@ const SetSubmissionPriority = ({
           </option>
         ))}
       </select>
+
+      <input
+        className="w-full border border-stone-300 rounded-lg p-2 mb-4"
+        value={reason}
+        placeholder="Enter reason"
+        onChange={(e) => setReason(e.target.value)}
+      />
+
       <div className="flex justify-end gap-3">
         <Button
           variant={"ghost"}

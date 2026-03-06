@@ -19,7 +19,6 @@ import {
   Forward,
   Eye,
 } from "lucide-react";
-import { mockSubmissions } from "@/lib/admin-mock-data";
 import adminRoutes from "@/helpers/admin/routes";
 import useGetSubmissionDetailsByTrackingNumber from "@/react-query/admin/queries/useGetSubmissionDetailsByTrackingNumber";
 import { formatFileSize } from "@/utils/formatters";
@@ -31,16 +30,19 @@ import SetSubmissionPriority from "@/components/admin/submission-actions/set-sub
 import { Button } from "@/components/ui/button";
 import AddNoteToSubmission from "@/components/admin/submission-actions/add-note-to-submission.component";
 import ForwardSubmission from "@/components/admin/submission-actions/forward-submission.component";
+import SubmissionResponses from "@/components/submission/submission-responses/submission-responses.component";
+import useGetSubmissionResponses from "@/react-query/admin/queries/useGetSubmissionResponses";
+import SendSubmissionResponse from "@/components/submission/send-submission-response/send-submission-response.component";
 
 interface PageProps {
   params: { id: string };
 }
 
 export default function SubmissionDetailPage({ params }: PageProps) {
-  const { data: submission_, isLoading: isLoadingSubmission } =
+  const { data: submission, isLoading: isLoadingSubmission } =
     useGetSubmissionDetailsByTrackingNumber(params.id);
 
-  const submission = mockSubmissions.find((s) => s.id === "1");
+  const sendResponseModalProps = useCreateModalProps();
 
   const changeStatusModalProps = useCreateModalProps();
   const setPriorityModalProps = useCreateModalProps();
@@ -51,15 +53,9 @@ export default function SubmissionDetailPage({ params }: PageProps) {
     "details" | "notes" | "responses" | "history"
   >("details");
 
-  const [showResponseModal, setShowResponseModal] = useState(false);
-
-  // Form states
-
-  const [responseData, setResponseData] = useState({
-    type: "holding" as "holding" | "detailed" | "final",
-    content: "",
-    sendVia: "both" as "email" | "portal" | "both",
-  });
+  const { data: responsesData } = useGetSubmissionResponses(
+    submission?.id as string,
+  );
 
   if (isLoadingSubmission) {
     return (
@@ -80,7 +76,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
     );
   }
 
-  if (!submission_ || !submission) {
+  if (!submission) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -103,17 +99,11 @@ export default function SubmissionDetailPage({ params }: PageProps) {
     );
   }
 
-  const handleSendResponse = () => {
-    console.log("Sending response:", responseData);
-    setShowResponseModal(false);
-    setResponseData({ type: "holding", content: "", sendVia: "both" });
-  };
-
   return (
     <div className="min-h-screen pb-8">
       <AdminHeader
-        title={submission_.trackingNumber}
-        subtitle={submission_.title}
+        title={submission.trackingNumber}
+        subtitle={submission.title}
       />
 
       <div className="p-6">
@@ -148,7 +138,6 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
                 <Button
                   variant={"ghost"}
-                  // disabled
                   onClick={forwardSubmissionModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                 >
@@ -165,8 +154,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
                 <Button
                   variant={"ghost"}
-                  disabled
-                  onClick={() => setShowResponseModal(true)}
+                  onClick={sendResponseModalProps.open}
                   className="flex items-center gap-2 px-4 py-2 bg-cyan-50 text-cyan-700 rounded-lg hover:bg-cyan-100 transition-colors text-sm font-medium"
                 >
                   <Send className="w-4 h-4" /> Send Response
@@ -183,19 +171,19 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                     id: "notes",
                     label: "Internal Notes",
                     icon: MessageSquare,
-                    count: submission_.internalNotes.length,
+                    count: submission.internalNotes.length,
                   },
                   {
                     id: "responses",
                     label: "Responses",
                     icon: Send,
-                    count: submission.responses.length,
+                    count: responsesData?.total ?? "-",
                   },
                   {
                     id: "history",
                     label: "Activity Log",
                     icon: History,
-                    count: submission_.auditEntries.length,
+                    count: submission.auditEntries.length,
                   },
                 ].map((tab) => (
                   <button
@@ -223,17 +211,17 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                       </h3>
                       <div className="prose prose-stone max-w-none">
                         <p className="text-stone-700 leading-relaxed whitespace-pre-wrap">
-                          {submission_.description}
+                          {submission.description}
                         </p>
                       </div>
                     </div>
 
                     <div>
                       <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">
-                        Attachments ({submission_.files?.length})
+                        Attachments ({submission.files?.length})
                       </h3>
                       <div className="grid gap-3">
-                        {submission_.files?.map((file) => (
+                        {submission.files?.map((file) => (
                           <div
                             key={file.id}
                             className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-200"
@@ -276,7 +264,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 {/* Notes Tab */}
                 {activeTab === "notes" && (
                   <div className="space-y-4">
-                    {submission_.internalNotes.length === 0 ? (
+                    {submission.internalNotes.length === 0 ? (
                       <div className="text-center py-8">
                         <MessageSquare className="w-10 h-10 text-stone-300 mx-auto mb-3" />
                         <p className="text-stone-500">No internal notes yet</p>
@@ -288,7 +276,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                         </button>
                       </div>
                     ) : (
-                      submission_.internalNotes.map((note) => (
+                      submission.internalNotes.map((note) => (
                         <div
                           key={note.id}
                           className="p-4 bg-stone-50 rounded-lg border border-stone-200"
@@ -329,64 +317,20 @@ export default function SubmissionDetailPage({ params }: PageProps) {
 
                 {/* Responses Tab */}
                 {activeTab === "responses" && (
-                  <div className="space-y-4">
-                    {submission.responses.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Send className="w-10 h-10 text-stone-300 mx-auto mb-3" />
-                        <p className="text-stone-500">No responses sent yet</p>
-                        <button
-                          onClick={() => setShowResponseModal(true)}
-                          className="mt-3 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-                        >
-                          Send a response
-                        </button>
-                      </div>
-                    ) : (
-                      submission.responses.map((response) => (
-                        <div
-                          key={response.id}
-                          className="p-4 bg-blue-50 rounded-lg border border-blue-200"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${response.type === "holding" ? "bg-amber-100 text-amber-700" : response.type === "detailed" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}
-                              >
-                                {response.type.charAt(0).toUpperCase() +
-                                  response.type.slice(1)}{" "}
-                                Response
-                              </span>
-                              <span className="text-xs text-stone-500">
-                                via {response.sentVia}
-                              </span>
-                            </div>
-                            <p className="text-xs text-stone-500">
-                              {new Date(response.sentAt).toLocaleString()}
-                            </p>
-                          </div>
-                          <p className="text-stone-700 text-sm whitespace-pre-wrap">
-                            {response.content}
-                          </p>
-                          <p className="text-xs text-stone-500 mt-2">
-                            — {response.authorName}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  <SubmissionResponses submissionId={submission.id} />
                 )}
 
                 {/* History Tab */}
                 {activeTab === "history" && (
                   <div className="space-y-0">
-                    {submission_?.auditEntries.length
-                      ? submission_.auditEntries.map((log, index) => (
+                    {submission?.auditEntries.length
+                      ? submission.auditEntries.map((log, index) => (
                           <div key={log.id} className="flex gap-4">
                             <div className="flex flex-col items-center">
                               <div
                                 className={`min-w-3 min-h-3 rounded-full ${log.action === "created" ? "bg-blue-500" : log.action === "status_changed" ? "bg-emerald-500" : log.action === "forwarded" ? "bg-cyan-500" : log.action === "priority_changed" ? "bg-orange-500" : log.action === "response_sent" ? "bg-purple-500" : "bg-stone-400"}`}
                               />
-                              {index < submission.activityLog.length - 1 && (
+                              {index < submission.auditEntries.length - 1 && (
                                 <div className="w-0.5 h-full bg-stone-200 my-1" />
                               )}
                             </div>
@@ -396,7 +340,7 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                               </p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-xs text-stone-500">
-                                  {log.adminUser.name}
+                                  {log?.adminUser?.name ?? "N/A"}
                                 </span>
                                 <span className="text-stone-300">•</span>
                                 <span className="text-xs text-stone-400">
@@ -424,13 +368,13 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 <div className="capitalize">
                   <p className="text-xs text-stone-500 mb-1">Current Status</p>
 
-                  <StatusBadge status={submission_.status} />
+                  <StatusBadge status={submission.status} />
                 </div>
 
                 <div className="capitalize">
                   <p className="text-xs text-stone-500 mb-1">Priority</p>
 
-                  <StatusBadge status={submission_.priority} />
+                  <StatusBadge status={submission.priority} />
                 </div>
 
                 {/* {submission.assignedDepartment && (
@@ -458,16 +402,16 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                 <div className="flex items-center gap-3">
                   <User className="w-4 h-4 text-stone-400" />
                   <span className="text-sm text-stone-700">
-                    {submission_.user?.name ?? "N/A"}
+                    {submission.user?.name ?? "N/A"}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-stone-400" />
                   <a
-                    href={`mailto:${submission_.user?.email}`}
+                    href={`mailto:${submission.user?.email}`}
                     className="text-sm text-emerald-600 hover:underline"
                   >
-                    {submission_?.user?.email}
+                    {submission?.user?.email}
                   </a>
                 </div>
                 {/* {submission.submitterPhone && (
@@ -491,12 +435,23 @@ export default function SubmissionDetailPage({ params }: PageProps) {
         {...changeStatusModalProps}
       >
         <ChangeSubmissionStatus
-          status={submission_.status}
+          status={submission.status}
           closeModal={changeStatusModalProps.close}
           identifier={{
-            id: submission_.id,
-            trackingNumber: submission_.trackingNumber,
+            id: submission.id,
+            trackingNumber: submission.trackingNumber,
           }}
+        />
+      </Modal>
+
+      <Modal
+        title="Send Response"
+        description="Respond to a submission"
+        {...sendResponseModalProps}
+      >
+        <SendSubmissionResponse
+          submissionId={submission.id}
+          handleCloseModal={sendResponseModalProps.close}
         />
       </Modal>
 
@@ -506,11 +461,11 @@ export default function SubmissionDetailPage({ params }: PageProps) {
         {...setPriorityModalProps}
       >
         <SetSubmissionPriority
-          priority={submission_.priority}
+          priority={submission.priority}
           closeModal={setPriorityModalProps.close}
           identifier={{
-            id: submission_.id,
-            trackingNumber: submission_.trackingNumber,
+            id: submission.id,
+            trackingNumber: submission.trackingNumber,
           }}
         />
       </Modal>
@@ -519,8 +474,8 @@ export default function SubmissionDetailPage({ params }: PageProps) {
         <AddNoteToSubmission
           closeModal={addNoteModalProps.close}
           identifier={{
-            id: submission_.id,
-            trackingNumber: submission_.trackingNumber,
+            id: submission.id,
+            trackingNumber: submission.trackingNumber,
           }}
         />
       </Modal>
@@ -533,72 +488,11 @@ export default function SubmissionDetailPage({ params }: PageProps) {
         <ForwardSubmission
           closeModal={forwardSubmissionModalProps.close}
           identifier={{
-            id: submission_.id,
-            trackingNumber: submission_.trackingNumber,
+            id: submission.id,
+            trackingNumber: submission.trackingNumber,
           }}
         />
       </Modal>
-
-      {/* Response Modal */}
-      {showResponseModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">
-              Send Response
-            </h3>
-            <select
-              className="w-full border border-stone-300 rounded-lg p-2 mb-2"
-              value={responseData.type}
-              onChange={(e) =>
-                setResponseData({
-                  ...responseData,
-                  type: e.target.value as "holding" | "detailed" | "final",
-                })
-              }
-            >
-              <option value="holding">Holding Response</option>
-              <option value="detailed">Detailed Response</option>
-              <option value="final">Final Response</option>
-            </select>
-            <textarea
-              className="w-full border border-stone-300 rounded-lg p-2 mb-2"
-              placeholder="Write response..."
-              value={responseData.content}
-              onChange={(e) =>
-                setResponseData({ ...responseData, content: e.target.value })
-              }
-            />
-            <select
-              className="w-full border border-stone-300 rounded-lg p-2 mb-4"
-              value={responseData.sendVia}
-              onChange={(e) =>
-                setResponseData({
-                  ...responseData,
-                  sendVia: e.target.value as "email" | "portal" | "both",
-                })
-              }
-            >
-              <option value="both">Send via Email & Portal</option>
-              <option value="email">Email Only</option>
-              <option value="portal">Portal Only</option>
-            </select>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300"
-                onClick={() => setShowResponseModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={handleSendResponse}
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

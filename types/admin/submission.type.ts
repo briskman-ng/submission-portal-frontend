@@ -65,3 +65,32 @@ export interface Submission {
   }[];
   responses: never[];
 }
+
+export interface SubmissionResponses {
+  id: string;
+  responseType: string;
+  subject: string;
+  content: string;
+  deliveryMethod: "email_only" | "portal_only" | "both";
+  sentAt: string;
+  sentBy: {
+    id: string;
+    name: string;
+    email: string;
+    azureObjectId: null;
+    role: string;
+    mustChangePassword: boolean;
+    isActive: boolean;
+    lastLogin: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  deliveryStatus: {
+    emailSent: boolean;
+    emailDeliveredAt: string;
+    portalStored: boolean;
+    portalStoredAt: string;
+  };
+  requiresAction: boolean;
+  actionItems: never[];
+}
