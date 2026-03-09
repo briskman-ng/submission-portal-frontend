@@ -45,7 +45,7 @@ const Modal = ({
 
       <DialogContent
         className={cn(
-          "w-[90vw] max-w-[500px] sm:max-w-[425px] max-h-[85vh]",
+          "w-[90vw] max-w-[500px] max-h-[85vh] flex flex-col gap-3",
           className,
         )}
         {...restProps}
@@ -56,7 +56,7 @@ const Modal = ({
             <DialogDescription>{description}</DialogDescription>
           </VisuallyHidden>
         ) : (
-          <DialogHeader>
+          <DialogHeader className="h-fit">
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>

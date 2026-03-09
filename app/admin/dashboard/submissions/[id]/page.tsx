@@ -33,6 +33,8 @@ import ForwardSubmission from "@/components/admin/submission-actions/forward-sub
 import SubmissionResponses from "@/components/submission/submission-responses/submission-responses.component";
 import useGetSubmissionResponses from "@/react-query/admin/queries/useGetSubmissionResponses";
 import SendSubmissionResponse from "@/components/submission/send-submission-response/send-submission-response.component";
+import { Submission } from "@/types/admin/submission.type";
+import ViewAttachment from "@/components/admin/view-attachment/view-attachment.component";
 
 interface PageProps {
   params: { id: string };
@@ -42,12 +44,16 @@ export default function SubmissionDetailPage({ params }: PageProps) {
   const { data: submission, isLoading: isLoadingSubmission } =
     useGetSubmissionDetailsByTrackingNumber(params.id);
 
+  const [attachmentToView, setAttachmentToView] =
+    useState<Submission["files"][number]>();
+
   const sendResponseModalProps = useCreateModalProps();
 
   const changeStatusModalProps = useCreateModalProps();
   const setPriorityModalProps = useCreateModalProps();
   const addNoteModalProps = useCreateModalProps();
   const forwardSubmissionModalProps = useCreateModalProps();
+  const viewAttachmentModalProps = useCreateModalProps();
 
   const [activeTab, setActiveTab] = useState<
     "details" | "notes" | "responses" | "history"
@@ -56,6 +62,13 @@ export default function SubmissionDetailPage({ params }: PageProps) {
   const { data: responsesData } = useGetSubmissionResponses(
     submission?.id as string,
   );
+
+  const handleViewAttachment = (file: typeof attachmentToView) => {
+    if (!file) return;
+
+    setAttachmentToView(file);
+    viewAttachmentModalProps.open();
+  };
 
   if (isLoadingSubmission) {
     return (
@@ -239,8 +252,12 @@ export default function SubmissionDetailPage({ params }: PageProps) {
                                 </p>
                               </div>
                             </div>
+
                             <div className="flex items-center gap-2">
-                              <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-white rounded-lg transition-colors">
+                              <button
+                                onClick={() => handleViewAttachment(file)}
+                                className="p-2 text-stone-400 hover:text-stone-600 hover:bg-white rounded-lg transition-colors"
+                              >
                                 <Eye className="w-4 h-4" />
                               </button>
 
@@ -492,6 +509,15 @@ export default function SubmissionDetailPage({ params }: PageProps) {
             trackingNumber: submission.trackingNumber,
           }}
         />
+      </Modal>
+
+      <Modal
+        title="View Attachment"
+        description=""
+        {...viewAttachmentModalProps}
+        className="max-w-[800px] h-full"
+      >
+        <ViewAttachment file={attachmentToView} />
       </Modal>
     </div>
   );
